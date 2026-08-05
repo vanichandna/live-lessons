@@ -15,31 +15,34 @@
         
         /* Premium Role Selection Overlay */
         #role-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 24px; }
-        .role-title { color: white; font-weight: 500; font-size: 28px; letter-spacing: -0.5px; margin-bottom: 10px; }
-        .role-btn { padding: 16px 36px; font-size: 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .role-btn:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); }
-        .btn-instructor { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
-        .btn-student { background: white; color: #0f172a; }
+        .role-title { color: white; font-weight: 500; font-size: 28px; letter-spacing: -0.5px; margin-bottom: 10px; text-align: center; }
+        
+        .auth-box { background: white; padding: 30px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; min-width: 300px; }
+        .auth-box input { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; text-align: center; outline: none; }
+        .auth-box input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        
+        .role-btn { padding: 16px 36px; font-size: 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .role-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15); }
+        .btn-instructor { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; width: 100%; }
+        .btn-student { background: transparent; color: white; border: 2px solid white; margin-top: 20px; }
 
         /* Floating Modern Toolbar */
         #toolbar-wrapper { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 100%; display: flex; justify-content: center; }
         #toolbar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 12px 20px; display: flex; gap: 12px; align-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); pointer-events: auto; flex-wrap: wrap; max-width: 95vw; }
         
-        #toolbar button, #toolbar input, #toolbar select { padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; background: white; transition: all 0.2s; font-weight: 500; color: #334155; }
+        #toolbar button, #toolbar input, #toolbar select { padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; background: white; font-weight: 500; color: #334155; }
         #toolbar button:hover { background: #f8fafc; border-color: #cbd5e1; }
         #toolbar input[type="text"] { cursor: text; min-width: 200px; }
         
         .primary-btn { background: #2563eb !important; color: white !important; border: none !important; }
         .primary-btn:hover { background: #1d4ed8 !important; }
         .danger-btn { background: #ef4444 !important; color: white !important; border: none !important; }
-        .danger-btn:hover { background: #dc2626 !important; }
         
         .instructor-only, .student-only { display: none; align-items: center; gap: 12px; }
         .instructor-tag { background: #eff6ff; padding: 10px 16px; border-radius: 8px; border: 1px solid #bfdbfe; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center;}
         #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: white; padding: 4px 8px; border-radius: 4px;}
         .divider { width: 1px; height: 32px; background: #e2e8f0; margin: 0 4px; }
         
-        /* Custom Styling for Color & Range Inputs */
         #color-picker { padding: 2px !important; width: 42px; height: 42px; cursor: pointer; }
         input[type=range] { padding: 0 !important; cursor: pointer; }
         
@@ -48,22 +51,22 @@
         #workspace:active { cursor: grabbing; }
         canvas { background: #ffffff; cursor: crosshair; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; }
         
-        /* Custom Scrollbar for Elegance */
-        ::-webkit-scrollbar { width: 10px; height: 10px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* Floating Panels (Desmos & Screen Share) */
+        .draggable-panel { display: none; position: fixed; z-index: 100; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; background: white; resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
+        .drag-handle { background: #f8fafc; color: #334155; padding: 10px 16px; font-size: 14px; cursor: move; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
         
-        /* Floating Elements */
+        /* Specific Panel Initial Sizes */
+        #desmos-container { top: 100px; right: 30px; width: 500px; height: 550px; }
+        #screenshare-container { top: 100px; left: 30px; width: 600px; height: 450px; }
+        
+        #calculator { width: 100%; height: calc(100% - 40px); }
+        #screenshare-video { width: 100%; height: calc(100% - 40px); background: #000; object-fit: contain; }
+
+        /* Camera Video Panel */
         #video-container { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 16px; align-items: flex-end; z-index: 150; pointer-events: none; }
-        video { background: #0f172a; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); pointer-events: auto; object-fit: cover; }
+        video.cam-video { background: #0f172a; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); pointer-events: auto; object-fit: cover; }
         #local-video { width: 140px; height: 105px; border: 2px solid white; }
         #remote-video { width: 280px; height: 210px; border: 3px solid #2563eb; display: none; }
-
-        /* Resizable Desmos */
-        #desmos-container { display: none; position: fixed; top: 100px; right: 30px; width: 500px; height: 550px; z-index: 100; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #e2e8f0; background: white; resize: both; overflow: hidden; min-width: 300px; min-height: 300px; }
-        #calculator { width: 100%; height: calc(100% - 40px); }
-        #desmos-drag-handle { background: #f8fafc; color: #334155; padding: 10px 16px; font-size: 14px; cursor: move; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
         
         #toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 500; display: none; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
     </style>
@@ -72,8 +75,15 @@
     <!-- Premium Role Selection -->
     <div id="role-overlay">
         <h2 class="role-title">Live Mathematics Workspace</h2>
-        <button class="role-btn btn-instructor" onclick="initSession('instructor')">Start Lesson (Instructor)</button>
-        <button class="role-btn btn-student" onclick="initSession('student')">Join Lesson (Student)</button>
+        
+        <div class="auth-box">
+            <div style="color: #64748b; font-size: 14px; font-weight: 500;">Instructor Login</div>
+            <!-- INSTRUCTOR SECURE PIN INPUT -->
+            <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
+            <button class="role-btn btn-instructor" onclick="verifyInstructor()">Open Classroom</button>
+        </div>
+        
+        <button class="role-btn btn-student" onclick="initSession('student')">Join as Student</button>
     </div>
 
     <!-- Floating Toolbar -->
@@ -87,13 +97,12 @@
             </div>
             
             <div id="student-tools" class="student-only">
-                <input type="text" id="join-id" placeholder="Paste Instructor Room ID here...">
+                <input type="text" id="join-id" placeholder="Paste Room ID here...">
                 <button class="primary-btn" onclick="joinRoom()">Connect</button>
             </div>
             
             <div class="divider"></div>
             
-            <!-- Sleek Whiteboard Tools -->
             <select id="tool-select">
                 <option value="pen">🖊️ Pen</option>
                 <option value="eraser">🧽 Eraser</option>
@@ -105,14 +114,12 @@
             
             <div class="divider"></div>
             
-            <!-- A/V Controls -->
             <button id="btn-mute" onclick="toggleMute()">🎙️ Mute</button>
             <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
-            <button class="primary-btn" onclick="toggleScreenShare()">📺 Screen</button>
+            <button class="primary-btn" id="btn-screen" onclick="toggleScreenShare()">📺 Share Screen</button>
+            <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
             
             <div class="divider"></div>
-
-            <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
             <button class="danger-btn" onclick="leaveClassroom()">End</button>
         </div>
     </div>
@@ -123,56 +130,76 @@
     </div>
 
     <!-- Resizable Desmos Panel -->
-    <div id="desmos-container">
-        <div id="desmos-drag-handle">
+    <div id="desmos-container" class="draggable-panel">
+        <div id="desmos-drag-handle" class="drag-handle">
             <span>Graphing Calculator</span>
             <span style="cursor:pointer; color:#ef4444;" onclick="toggleDesmos()">✕</span>
         </div>
         <div id="calculator"></div>
     </div>
 
-    <!-- Video Panel -->
+    <!-- Resizable Screen Share Panel -->
+    <div id="screenshare-container" class="draggable-panel">
+        <div id="screenshare-drag-handle" class="drag-handle">
+            <span>Shared Screen</span>
+            <span style="cursor:pointer; color:#ef4444;" onclick="stopScreenShare()">✕</span>
+        </div>
+        <video id="screenshare-video" autoplay playsinline></video>
+    </div>
+
+    <!-- Camera Video Panel -->
     <div id="video-container">
-        <video id="local-video" autoplay muted playsinline></video>
-        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" class="cam-video" autoplay muted playsinline></video>
+        <video id="remote-video" class="cam-video" autoplay playsinline></video>
     </div>
 
     <div id="toast">Message</div>
 
     <script>
+        // --- SECURE PIN CONFIGURATION ---
+        // Change "VANI-MATH" to whatever secret password you want to use.
+        const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
+
         // --- Core Setup ---
         const canvas = document.getElementById('whiteboard');
         const ctx = canvas.getContext('2d');
         const workspace = document.getElementById('workspace');
         
-        // Massive Canvas for 4-way scrolling
         const CANVAS_SIZE = 15000;
         canvas.width = CANVAS_SIZE;
         canvas.height = CANVAS_SIZE;
 
         let isDrawing = false;
         let connections = [];
+        let connectedStudentIDs = [];
         let peer, localStream, currentCall, userRole;
-        let isScreenSharing = false;
+        
+        let screenStream = null;
+        let screenCalls = [];
+
+        // --- Authentication ---
+        function verifyInstructor() {
+            const enteredPin = document.getElementById('instructor-pin').value;
+            if (enteredPin === INSTRUCTOR_SECRET_PIN) {
+                initSession('instructor');
+            } else {
+                alert("Incorrect PIN. Only the authorized instructor can open a classroom.");
+            }
+        }
 
         // --- Canvas Panning & Scrolling ---
-        // Center the canvas on load
         function recenterCanvas() {
             workspace.scrollLeft = (CANVAS_SIZE / 2) - (window.innerWidth / 2);
             workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
         }
-        // Call immediately
         recenterCanvas();
 
-        // Optional Middle-Mouse Pan (Grab and drag to scroll canvas)
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
         workspace.addEventListener('mousedown', (e) => {
-            if (e.button === 1 || e.shiftKey) { // Middle click or Shift+Click to pan
+            if (e.button === 1 || e.shiftKey) { 
                 isPanning = true;
-                startPanX = e.clientX;
-                startPanY = e.clientY;
-                startScrollLeft = workspace.scrollLeft;
-                startScrollTop = workspace.scrollTop;
+                startPanX = e.clientX; startPanY = e.clientY;
+                startScrollLeft = workspace.scrollLeft; startScrollTop = workspace.scrollTop;
                 e.preventDefault();
             }
         });
@@ -183,14 +210,36 @@
         });
         window.addEventListener('mouseup', () => { isPanning = false; });
 
-        // --- Desmos Initialization & Resize Observer ---
+        // --- Panel Dragging Logic (For both Desmos & Screen Share) ---
+        function makeDraggable(elementId, handleId) {
+            const el = document.getElementById(elementId);
+            const handle = document.getElementById(handleId);
+            let isDraggingWin = false, startX, startY;
+
+            handle.addEventListener('mousedown', (e) => {
+                isDraggingWin = true;
+                startX = e.clientX - el.offsetLeft;
+                startY = e.clientY - el.offsetTop;
+                // Bring to front
+                document.querySelectorAll('.draggable-panel').forEach(p => p.style.zIndex = 100);
+                el.style.zIndex = 101;
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!isDraggingWin) return;
+                el.style.left = (e.clientX - startX) + 'px';
+                el.style.top = (e.clientY - startY) + 'px';
+            });
+            document.addEventListener('mouseup', () => { isDraggingWin = false; });
+        }
+        
+        makeDraggable('desmos-container', 'desmos-drag-handle');
+        makeDraggable('screenshare-container', 'screenshare-drag-handle');
+
+        // --- Desmos Initialization ---
         const calcElement = document.getElementById('calculator');
         const calculator = Desmos.GraphingCalculator(calcElement, { expressions: true, settingsMenu: true });
         
-        // Make Desmos redraw nicely when you drag the corner to resize
-        const resizeObserver = new ResizeObserver(() => {
-            calculator.resize();
-        });
+        const resizeObserver = new ResizeObserver(() => { calculator.resize(); });
         resizeObserver.observe(document.getElementById('desmos-container'));
 
         // --- Session Initialization ---
@@ -211,17 +260,44 @@
                 document.getElementById('instructor-tools').style.display = 'flex';
                 peer.on('open', (id) => { document.getElementById('my-id').innerText = id; });
                 
+                // Instructor receiving calls (from students)
                 peer.on('call', (call) => {
                     currentCall = call;
                     call.answer(localStream);
-                    handleRemoteStream(call);
+                    
+                    call.on('stream', (remoteStream) => {
+                        const remoteVideo = document.getElementById('remote-video');
+                        remoteVideo.srcObject = remoteStream;
+                        remoteVideo.style.display = 'block';
+                    });
                 });
-                peer.on('connection', (conn) => setupDataConnection(conn));
+                
+                // Instructor receiving data connection
+                peer.on('connection', (conn) => {
+                    setupDataConnection(conn);
+                    if (!connectedStudentIDs.includes(conn.peer)) {
+                        connectedStudentIDs.push(conn.peer);
+                    }
+                });
             } else {
+                // Student Mode
                 document.getElementById('student-tools').style.display = 'flex';
+                document.getElementById('btn-screen').style.display = 'none'; // Only instructor shares screen
+                
+                peer.on('call', (call) => {
+                    // Check if this incoming call is a screen share or normal camera
+                    if (call.metadata && call.metadata.type === 'screenshare') {
+                        call.answer(); // Don't send our camera back for a screen share stream
+                        call.on('stream', (stream) => {
+                            document.getElementById('screenshare-video').srcObject = stream;
+                            document.getElementById('screenshare-container').style.display = 'block';
+                        });
+                    }
+                });
             }
         }
 
+        // Student joining the instructor
         function joinRoom() {
             const id = document.getElementById('join-id').value.trim();
             if (!id) return;
@@ -231,22 +307,18 @@
 
             if (localStream) {
                 currentCall = peer.call(id, localStream);
-                handleRemoteStream(currentCall);
+                currentCall.on('stream', (remoteStream) => {
+                    const remoteVideo = document.getElementById('remote-video');
+                    remoteVideo.srcObject = remoteStream;
+                    remoteVideo.style.display = 'block';
+                });
             }
         }
 
-        function handleRemoteStream(call) {
-            call.on('stream', (remoteStream) => {
-                const remoteVideo = document.getElementById('remote-video');
-                remoteVideo.srcObject = remoteStream;
-                remoteVideo.style.display = 'block';
-            });
-        }
-
-        // --- WebRTC Data Sync ---
+        // --- WebRTC Data Sync (Whiteboard) ---
         function setupDataConnection(conn) {
             connections.push(conn);
-            conn.on('open', () => showToast("Securely connected!"));
+            conn.on('open', () => showToast("Securely connected to classroom!"));
             conn.on('data', (data) => {
                 if (data.type === 'draw') {
                     drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width, data.tool, false);
@@ -254,6 +326,8 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                 } else if (data.type === 'image') {
                     drawImageFromData(data.src, data.x, data.y);
+                } else if (data.type === 'stop-screenshare') {
+                    document.getElementById('screenshare-container').style.display = 'none';
                 }
             });
         }
@@ -271,11 +345,7 @@
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            // Subtracting rect.left accounts precisely for the huge canvas scroll position
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
+            return { x: clientX - rect.left, y: clientY - rect.top };
         }
 
         function drawLine(x0, y0, x1, y1, color, width, tool, emit) {
@@ -284,7 +354,7 @@
             ctx.lineTo(x1, y1);
             if (tool === 'eraser') {
                 ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineWidth = width * 4; // Fatter eraser
+                ctx.lineWidth = width * 4; 
             } else {
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.strokeStyle = color;
@@ -300,7 +370,7 @@
         }
 
         canvas.addEventListener('mousedown', (e) => { 
-            if (e.button === 1 || e.shiftKey) return; // Ignore if panning
+            if (e.button === 1 || e.shiftKey) return; 
             isDrawing = true; 
             const coords = getCoordinates(e); 
             lastX = coords.x; lastY = coords.y; 
@@ -323,7 +393,6 @@
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         const base64data = event.target.result;
-                        // Paste directly in the center of the user's current view
                         const x = workspace.scrollLeft + (window.innerWidth / 2) - 200;
                         const y = workspace.scrollTop + (window.innerHeight / 2) - 200;
                         drawImageFromData(base64data, x, y);
@@ -364,61 +433,60 @@
             btn.style.background = videoTrack.enabled ? "" : "#fee2e2";
         }
 
+        // --- Separate Window Screen Sharing ---
         async function toggleScreenShare() {
-            if (isScreenSharing) {
-                if (currentCall && localStream) {
-                    const videoTrack = localStream.getVideoTracks()[0];
-                    const sender = currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
-                    if (sender) sender.replaceTrack(videoTrack);
-                    document.getElementById('local-video').srcObject = localStream;
-                }
-                isScreenSharing = false;
-                showToast("Screen sharing stopped.");
-            } else {
-                try {
-                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    const screenTrack = screenStream.getVideoTracks()[0];
-                    if (currentCall) {
-                        const sender = currentCall.peerConnection.getSenders().find(s => s.track.kind === 'video');
-                        if (sender) sender.replaceTrack(screenTrack);
-                    }
-                    document.getElementById('local-video').srcObject = screenStream;
-                    isScreenSharing = true;
-                    screenTrack.onended = () => { toggleScreenShare(); };
-                    showToast("Screen sharing started.");
-                } catch (e) {
-                    console.error("Screen share error", e);
-                }
+            if (screenStream) {
+                stopScreenShare();
+                return;
+            }
+            
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                
+                // Show locally in the separate panel
+                document.getElementById('screenshare-video').srcObject = screenStream;
+                document.getElementById('screenshare-container').style.display = 'block';
+                document.getElementById('btn-screen').innerText = "📺 Stop Share";
+
+                // Call all connected students with the screen stream on a separate channel
+                connectedStudentIDs.forEach(studentId => {
+                    const screenCall = peer.call(studentId, screenStream, { metadata: { type: 'screenshare' } });
+                    screenCalls.push(screenCall);
+                });
+
+                // Listen for browser "Stop Sharing" button
+                screenStream.getVideoTracks()[0].onended = () => { stopScreenShare(); };
+                showToast("Screen sharing started.");
+            } catch (e) {
+                console.error("Screen share error", e);
             }
         }
 
-        // --- Draggable Desmos ---
+        function stopScreenShare() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(t => t.stop());
+                screenStream = null;
+            }
+            screenCalls.forEach(call => call.close());
+            screenCalls = [];
+            
+            document.getElementById('screenshare-container').style.display = 'none';
+            document.getElementById('btn-screen').innerText = "📺 Share Screen";
+            broadcast({ type: 'stop-screenshare' });
+            showToast("Screen sharing stopped.");
+        }
+
         function toggleDesmos() {
             const panel = document.getElementById('desmos-container');
             panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
             if (panel.style.display === 'block') calculator.resize();
         }
 
-        const desmosPanel = document.getElementById('desmos-container');
-        const dragHandle = document.getElementById('desmos-drag-handle');
-        let isDraggingWindow = false, dragWinStartX, dragWinStartY;
-
-        dragHandle.addEventListener('mousedown', (e) => {
-            isDraggingWindow = true;
-            dragWinStartX = e.clientX - desmosPanel.offsetLeft;
-            dragWinStartY = e.clientY - desmosPanel.offsetTop;
-        });
-        document.addEventListener('mousemove', (e) => {
-            if (!isDraggingWindow) return;
-            desmosPanel.style.left = (e.clientX - dragWinStartX) + 'px';
-            desmosPanel.style.top = (e.clientY - dragWinStartY) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isDraggingWindow = false; });
-
         function leaveClassroom() {
             if (confirm("End the session?")) {
                 if (peer) peer.destroy();
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
+                if (screenStream) screenStream.getTracks().forEach(track => track.stop());
                 document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center;'><h1 style='color: #334155;'>Session Ended</h1></div>";
             }
         }
