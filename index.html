@@ -13,8 +13,8 @@
 
         body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; background: #eef2f6; overflow: hidden; }
         
-        /* Premium Role Selection Overlay */
-        #role-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 24px; }
+        /* Premium Entry Gates */
+        #role-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 24px; }
         .role-title { color: white; font-weight: 500; font-size: 28px; letter-spacing: -0.5px; margin-bottom: 10px; text-align: center; }
         
         .auth-box { background: white; padding: 30px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; min-width: 300px; }
@@ -24,26 +24,27 @@
         .role-btn { padding: 16px 36px; font-size: 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .role-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15); }
         .btn-instructor { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; width: 100%; }
-        .btn-student { background: transparent; color: white; border: 2px solid white; margin-top: 20px; }
+        .btn-student { background: transparent; color: white; border: 2px solid white; margin-top: 10px; }
+        .btn-text { background: transparent; color: #94a3b8; padding: 10px; box-shadow: none; }
+        .btn-text:hover { color: white; box-shadow: none; transform: none; }
 
         /* Floating Modern Toolbar */
         #toolbar-wrapper { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 100%; display: flex; justify-content: center; }
         #toolbar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 12px 20px; display: flex; gap: 12px; align-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); pointer-events: auto; flex-wrap: wrap; max-width: 95vw; }
         
-        #toolbar button, #toolbar input, #toolbar select { padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; background: white; font-weight: 500; color: #334155; }
+        #toolbar button, #toolbar select { padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; background: white; font-weight: 500; color: #334155; }
         #toolbar button:hover { background: #f8fafc; border-color: #cbd5e1; }
-        #toolbar input[type="text"] { cursor: text; min-width: 200px; }
         
         .primary-btn { background: #2563eb !important; color: white !important; border: none !important; }
         .primary-btn:hover { background: #1d4ed8 !important; }
         .danger-btn { background: #ef4444 !important; color: white !important; border: none !important; }
         
-        .instructor-only, .student-only { display: none; align-items: center; gap: 12px; }
+        .instructor-only { display: none; align-items: center; gap: 12px; }
         .instructor-tag { background: #eff6ff; padding: 10px 16px; border-radius: 8px; border: 1px solid #bfdbfe; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center;}
         #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: white; padding: 4px 8px; border-radius: 4px;}
         .divider { width: 1px; height: 32px; background: #e2e8f0; margin: 0 4px; }
         
-        #color-picker { padding: 2px !important; width: 42px; height: 42px; cursor: pointer; }
+        #color-picker { padding: 2px !important; width: 42px; height: 42px; cursor: pointer; border: 1px solid #e2e8f0; border-radius: 8px;}
         input[type=range] { padding: 0 !important; cursor: pointer; }
         
         /* 4-Way Scrollable Workspace */
@@ -51,11 +52,10 @@
         #workspace:active { cursor: grabbing; }
         canvas { background: #ffffff; cursor: crosshair; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; }
         
-        /* Floating Panels (Desmos & Screen Share) */
+        /* Floating Panels */
         .draggable-panel { display: none; position: fixed; z-index: 100; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; background: white; resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
         .drag-handle { background: #f8fafc; color: #334155; padding: 10px 16px; font-size: 14px; cursor: move; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
         
-        /* Specific Panel Initial Sizes */
         #desmos-container { top: 100px; right: 30px; width: 500px; height: 550px; }
         #screenshare-container { top: 100px; left: 30px; width: 600px; height: 450px; }
         
@@ -72,18 +72,29 @@
     </style>
 </head>
 <body>
-    <!-- Premium Role Selection -->
+    <!-- Secure Entry Gate -->
     <div id="role-overlay">
         <h2 class="role-title">Live Mathematics Workspace</h2>
         
-        <div class="auth-box">
-            <div style="color: #64748b; font-size: 14px; font-weight: 500;">Instructor Login</div>
-            <!-- INSTRUCTOR SECURE PIN INPUT -->
-            <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
-            <button class="role-btn btn-instructor" onclick="verifyInstructor()">Open Classroom</button>
+        <!-- Step 1: Role Selection -->
+        <div id="role-selection" style="display:flex; flex-direction:column; gap:20px; align-items:center;">
+            <div class="auth-box">
+                <div style="color: #64748b; font-size: 14px; font-weight: 500;">Instructor Access</div>
+                <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
+                <button class="role-btn btn-instructor" onclick="verifyInstructor()">Open Classroom</button>
+            </div>
+            <button class="role-btn btn-student" onclick="showStudentEntry()">Join as Student</button>
         </div>
-        
-        <button class="role-btn btn-student" onclick="initSession('student')">Join as Student</button>
+
+        <!-- Step 2: Student Waiting Room -->
+        <div id="student-entry" style="display:none; flex-direction:column; gap:20px; align-items:center;">
+            <div class="auth-box">
+                <div style="color: #64748b; font-size: 14px; font-weight: 500;">Student Access</div>
+                <input type="text" id="join-id" placeholder="Enter Instructor's Room ID">
+                <button class="role-btn btn-instructor" id="connect-btn" onclick="joinRoom()">Enter Classroom</button>
+            </div>
+            <button class="role-btn btn-text" onclick="backToRoles()">← Back</button>
+        </div>
     </div>
 
     <!-- Floating Toolbar -->
@@ -94,14 +105,8 @@
                     <span>Room ID:</span>
                     <span id="my-id">Generating...</span>
                 </div>
+                <div class="divider"></div>
             </div>
-            
-            <div id="student-tools" class="student-only">
-                <input type="text" id="join-id" placeholder="Paste Room ID here...">
-                <button class="primary-btn" onclick="joinRoom()">Connect</button>
-            </div>
-            
-            <div class="divider"></div>
             
             <select id="tool-select">
                 <option value="pen">🖊️ Pen</option>
@@ -116,7 +121,7 @@
             
             <button id="btn-mute" onclick="toggleMute()">🎙️ Mute</button>
             <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
-            <button class="primary-btn" id="btn-screen" onclick="toggleScreenShare()">📺 Share Screen</button>
+            <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Share Screen</button>
             <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
             
             <div class="divider"></div>
@@ -124,12 +129,11 @@
         </div>
     </div>
     
-    <!-- 4-Way Scrollable Workspace -->
     <div id="workspace">
         <canvas id="whiteboard"></canvas>
     </div>
 
-    <!-- Resizable Desmos Panel -->
+    <!-- Desmos Sync Panel -->
     <div id="desmos-container" class="draggable-panel">
         <div id="desmos-drag-handle" class="drag-handle">
             <span>Graphing Calculator</span>
@@ -138,7 +142,7 @@
         <div id="calculator"></div>
     </div>
 
-    <!-- Resizable Screen Share Panel -->
+    <!-- Screen Share Panel -->
     <div id="screenshare-container" class="draggable-panel">
         <div id="screenshare-drag-handle" class="drag-handle">
             <span>Shared Screen</span>
@@ -147,7 +151,7 @@
         <video id="screenshare-video" autoplay playsinline></video>
     </div>
 
-    <!-- Camera Video Panel -->
+    <!-- Video Panel -->
     <div id="video-container">
         <video id="local-video" class="cam-video" autoplay muted playsinline></video>
         <video id="remote-video" class="cam-video" autoplay playsinline></video>
@@ -156,11 +160,9 @@
     <div id="toast">Message</div>
 
     <script>
-        // --- SECURE PIN CONFIGURATION ---
-        // Change "VANI-MATH" to whatever secret password you want to use.
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
 
-        // --- Core Setup ---
+        // Core Setup
         const canvas = document.getElementById('whiteboard');
         const ctx = canvas.getContext('2d');
         const workspace = document.getElementById('workspace');
@@ -173,11 +175,20 @@
         let connections = [];
         let connectedStudentIDs = [];
         let peer, localStream, currentCall, userRole;
-        
         let screenStream = null;
         let screenCalls = [];
 
-        // --- Authentication ---
+        // UI Gate Functions
+        function showStudentEntry() {
+            document.getElementById('role-selection').style.display = 'none';
+            document.getElementById('student-entry').style.display = 'flex';
+        }
+
+        function backToRoles() {
+            document.getElementById('student-entry').style.display = 'none';
+            document.getElementById('role-selection').style.display = 'flex';
+        }
+
         function verifyInstructor() {
             const enteredPin = document.getElementById('instructor-pin').value;
             if (enteredPin === INSTRUCTOR_SECRET_PIN) {
@@ -187,7 +198,7 @@
             }
         }
 
-        // --- Canvas Panning & Scrolling ---
+        // Canvas Initialization
         function recenterCanvas() {
             workspace.scrollLeft = (CANVAS_SIZE / 2) - (window.innerWidth / 2);
             workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
@@ -210,7 +221,7 @@
         });
         window.addEventListener('mouseup', () => { isPanning = false; });
 
-        // --- Panel Dragging Logic (For both Desmos & Screen Share) ---
+        // Draggable Windows
         function makeDraggable(elementId, handleId) {
             const el = document.getElementById(elementId);
             const handle = document.getElementById(handleId);
@@ -220,7 +231,6 @@
                 isDraggingWin = true;
                 startX = e.clientX - el.offsetLeft;
                 startY = e.clientY - el.offsetTop;
-                // Bring to front
                 document.querySelectorAll('.draggable-panel').forEach(p => p.style.zIndex = 100);
                 el.style.zIndex = 101;
             });
@@ -231,21 +241,29 @@
             });
             document.addEventListener('mouseup', () => { isDraggingWin = false; });
         }
-        
         makeDraggable('desmos-container', 'desmos-drag-handle');
         makeDraggable('screenshare-container', 'screenshare-drag-handle');
 
-        // --- Desmos Initialization ---
+        // Initialize Desmos
         const calcElement = document.getElementById('calculator');
         const calculator = Desmos.GraphingCalculator(calcElement, { expressions: true, settingsMenu: true });
-        
-        const resizeObserver = new ResizeObserver(() => { calculator.resize(); });
-        resizeObserver.observe(document.getElementById('desmos-container'));
+        new ResizeObserver(() => { calculator.resize(); }).observe(document.getElementById('desmos-container'));
 
-        // --- Session Initialization ---
+        // Desmos State Broadcasting
+        let desmosSyncTimeout;
+        calculator.observeEvent('change', () => {
+            if (userRole === 'instructor') {
+                clearTimeout(desmosSyncTimeout);
+                // Debounce sync so it doesn't overload the connection while typing quickly
+                desmosSyncTimeout = setTimeout(() => {
+                    broadcast({ type: 'desmos-state', state: calculator.getState() });
+                }, 200);
+            }
+        });
+
+        // Initialize WebRTC
         function initSession(role) {
             userRole = role;
-            document.getElementById('role-overlay').style.display = 'none';
             
             navigator.mediaDevices.getUserMedia({ video: true, audio: true })
                 .then(stream => {
@@ -257,14 +275,16 @@
             peer = new Peer();
 
             if (role === 'instructor') {
+                // Instructor skips directly in after PIN
+                document.getElementById('role-overlay').style.display = 'none';
                 document.getElementById('instructor-tools').style.display = 'flex';
+                document.getElementById('btn-screen').style.display = 'inline-block';
+                
                 peer.on('open', (id) => { document.getElementById('my-id').innerText = id; });
                 
-                // Instructor receiving calls (from students)
                 peer.on('call', (call) => {
                     currentCall = call;
                     call.answer(localStream);
-                    
                     call.on('stream', (remoteStream) => {
                         const remoteVideo = document.getElementById('remote-video');
                         remoteVideo.srcObject = remoteStream;
@@ -272,7 +292,6 @@
                     });
                 });
                 
-                // Instructor receiving data connection
                 peer.on('connection', (conn) => {
                     setupDataConnection(conn);
                     if (!connectedStudentIDs.includes(conn.peer)) {
@@ -280,14 +299,12 @@
                     }
                 });
             } else {
-                // Student Mode
-                document.getElementById('student-tools').style.display = 'flex';
-                document.getElementById('btn-screen').style.display = 'none'; // Only instructor shares screen
+                // Student remains on overlay until connection opens
+                showStudentEntry();
                 
                 peer.on('call', (call) => {
-                    // Check if this incoming call is a screen share or normal camera
                     if (call.metadata && call.metadata.type === 'screenshare') {
-                        call.answer(); // Don't send our camera back for a screen share stream
+                        call.answer(); 
                         call.on('stream', (stream) => {
                             document.getElementById('screenshare-video').srcObject = stream;
                             document.getElementById('screenshare-container').style.display = 'block';
@@ -297,10 +314,14 @@
             }
         }
 
-        // Student joining the instructor
+        // Student Connect Action
         function joinRoom() {
             const id = document.getElementById('join-id').value.trim();
             if (!id) return;
+            
+            const btn = document.getElementById('connect-btn');
+            btn.innerText = "Connecting...";
+            btn.style.pointerEvents = "none";
             
             const conn = peer.connect(id);
             setupDataConnection(conn);
@@ -313,12 +334,34 @@
                     remoteVideo.style.display = 'block';
                 });
             }
+
+            // Connection timeout fail-safe
+            setTimeout(() => {
+                if (document.getElementById('role-overlay').style.display !== 'none') {
+                    btn.innerText = "Enter Classroom";
+                    btn.style.pointerEvents = "auto";
+                    alert("Could not connect. Please check the Room ID.");
+                }
+            }, 6000);
         }
 
-        // --- WebRTC Data Sync (Whiteboard) ---
         function setupDataConnection(conn) {
             connections.push(conn);
-            conn.on('open', () => showToast("Securely connected to classroom!"));
+            conn.on('open', () => {
+                // This officially grants the student entry and reveals the board
+                document.getElementById('role-overlay').style.display = 'none';
+                showToast("Securely connected to classroom!");
+                
+                // If instructor, push current Desmos state to the new arrival
+                if (userRole === 'instructor') {
+                    const isDesmosOpen = document.getElementById('desmos-container').style.display === 'block';
+                    if (isDesmosOpen) {
+                        conn.send({ type: 'desmos-toggle', show: true });
+                        conn.send({ type: 'desmos-state', state: calculator.getState() });
+                    }
+                }
+            });
+            
             conn.on('data', (data) => {
                 if (data.type === 'draw') {
                     drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width, data.tool, false);
@@ -328,6 +371,11 @@
                     drawImageFromData(data.src, data.x, data.y);
                 } else if (data.type === 'stop-screenshare') {
                     document.getElementById('screenshare-container').style.display = 'none';
+                } else if (data.type === 'desmos-toggle') {
+                    document.getElementById('desmos-container').style.display = data.show ? 'block' : 'none';
+                    if (data.show) calculator.resize();
+                } else if (data.type === 'desmos-state') {
+                    calculator.setState(data.state);
                 }
             });
         }
@@ -338,9 +386,7 @@
             });
         }
 
-        // --- Drawing Engine ---
-        let lastX = 0, lastY = 0;
-
+        // Whiteboard Logic
         function getCoordinates(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -384,7 +430,7 @@
         canvas.addEventListener('mouseup', () => isDrawing = false);
         canvas.addEventListener('mouseout', () => isDrawing = false);
 
-        // --- Image Pasting ---
+        // Images
         window.addEventListener('paste', function(e) {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (let i = 0; i < items.length; i++) {
@@ -414,7 +460,7 @@
             broadcast({ type: 'clear' });
         }
 
-        // --- Media Controls ---
+        // Tools
         function toggleMute() {
             if (!localStream) return;
             const audioTrack = localStream.getAudioTracks()[0];
@@ -433,28 +479,22 @@
             btn.style.background = videoTrack.enabled ? "" : "#fee2e2";
         }
 
-        // --- Separate Window Screen Sharing ---
         async function toggleScreenShare() {
             if (screenStream) {
                 stopScreenShare();
                 return;
             }
-            
             try {
                 screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-                
-                // Show locally in the separate panel
                 document.getElementById('screenshare-video').srcObject = screenStream;
                 document.getElementById('screenshare-container').style.display = 'block';
                 document.getElementById('btn-screen').innerText = "📺 Stop Share";
 
-                // Call all connected students with the screen stream on a separate channel
                 connectedStudentIDs.forEach(studentId => {
                     const screenCall = peer.call(studentId, screenStream, { metadata: { type: 'screenshare' } });
                     screenCalls.push(screenCall);
                 });
 
-                // Listen for browser "Stop Sharing" button
                 screenStream.getVideoTracks()[0].onended = () => { stopScreenShare(); };
                 showToast("Screen sharing started.");
             } catch (e) {
@@ -478,8 +518,17 @@
 
         function toggleDesmos() {
             const panel = document.getElementById('desmos-container');
-            panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-            if (panel.style.display === 'block') calculator.resize();
+            const isShowing = panel.style.display !== 'block';
+            panel.style.display = isShowing ? 'block' : 'none';
+            
+            if (isShowing) calculator.resize();
+            
+            if (userRole === 'instructor') {
+                broadcast({ type: 'desmos-toggle', show: isShowing });
+                if (isShowing) {
+                    broadcast({ type: 'desmos-state', state: calculator.getState() });
+                }
+            }
         }
 
         function leaveClassroom() {
