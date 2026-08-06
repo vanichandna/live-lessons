@@ -83,7 +83,8 @@
                 <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
                 <button class="role-btn btn-instructor" onclick="verifyInstructor()">Open Classroom</button>
             </div>
-            <button class="role-btn btn-student" onclick="showStudentEntry()">Join as Student</button>
+            <!-- FIXED: This now properly triggers the connection engine initialization -->
+            <button class="role-btn btn-student" onclick="initSession('student')">Join as Student</button>
         </div>
 
         <!-- Step 2: Student Waiting Room -->
@@ -179,11 +180,6 @@
         let screenCalls = [];
 
         // UI Gate Functions
-        function showStudentEntry() {
-            document.getElementById('role-selection').style.display = 'none';
-            document.getElementById('student-entry').style.display = 'flex';
-        }
-
         function backToRoles() {
             document.getElementById('student-entry').style.display = 'none';
             document.getElementById('role-selection').style.display = 'flex';
@@ -254,7 +250,6 @@
         calculator.observeEvent('change', () => {
             if (userRole === 'instructor') {
                 clearTimeout(desmosSyncTimeout);
-                // Debounce sync so it doesn't overload the connection while typing quickly
                 desmosSyncTimeout = setTimeout(() => {
                     broadcast({ type: 'desmos-state', state: calculator.getState() });
                 }, 200);
@@ -263,6 +258,8 @@
 
         // Initialize WebRTC with STUN Servers
         function initSession(role) {
+            if (peer) return; // Prevent double initialization
+            
             userRole = role;
             
             navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -270,23 +267,32 @@
                     localStream = stream;
                     document.getElementById('local-video').srcObject = stream;
                 })
-                .catch(err => showToast("Camera/Mic access denied."));
+                .catch(err => {
+                    console.log("Camera access bypassed/denied.");
+                });
 
             // STUN SERVERS ADDED HERE FOR NAT TRAVERSAL
             peer = new Peer({
                 config: {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                        { urls: 'stun:stun3.l.google.com:19302' },
-                        { urls: 'stun:stun4.l.google.com:19302' }
+                        { urls: 'stun:stun1.l.google.com:19302' }
                     ]
                 }
             });
 
+            // FIXED: Error handling added directly to connection engine
+            peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+                const btn = document.getElementById('connect-btn');
+                if (btn) {
+                    btn.innerText = "Enter Classroom";
+                    btn.style.pointerEvents = "auto";
+                }
+                alert("Connection Error: " + err.type + "\nPlease verify the ID is exactly correct.");
+            });
+
             if (role === 'instructor') {
-                // Instructor skips directly in after PIN
                 document.getElementById('role-overlay').style.display = 'none';
                 document.getElementById('instructor-tools').style.display = 'flex';
                 document.getElementById('btn-screen').style.display = 'inline-block';
@@ -295,7 +301,9 @@
                 
                 peer.on('call', (call) => {
                     currentCall = call;
-                    call.answer(localStream);
+                    if (localStream) call.answer(localStream);
+                    else call.answer();
+                    
                     call.on('stream', (remoteStream) => {
                         const remoteVideo = document.getElementById('remote-video');
                         remoteVideo.srcObject = remoteStream;
@@ -310,8 +318,9 @@
                     }
                 });
             } else {
-                // Student remains on overlay until connection opens
-                showStudentEntry();
+                // FIXED: Switch UI to Student Entry AFTER initializing PeerJS
+                document.getElementById('role-selection').style.display = 'none';
+                document.getElementById('student-entry').style.display = 'flex';
                 
                 peer.on('call', (call) => {
                     if (call.metadata && call.metadata.type === 'screenshare') {
@@ -346,12 +355,12 @@
                 });
             }
 
-            // Connection timeout fail-safe
+            // Fallback timeout in case the connection hangs without throwing an error
             setTimeout(() => {
                 if (document.getElementById('role-overlay').style.display !== 'none') {
                     btn.innerText = "Enter Classroom";
                     btn.style.pointerEvents = "auto";
-                    alert("Could not connect. Please check the Room ID and ensure you have no spaces.");
+                    alert("Connection timed out. Please check the Room ID and ensure the Instructor has the room open.");
                 }
             }, 8000);
         }
@@ -359,11 +368,9 @@
         function setupDataConnection(conn) {
             connections.push(conn);
             conn.on('open', () => {
-                // This officially grants the student entry and reveals the board
                 document.getElementById('role-overlay').style.display = 'none';
                 showToast("Securely connected to classroom!");
                 
-                // If instructor, push current Desmos state to the new arrival
                 if (userRole === 'instructor') {
                     const isDesmosOpen = document.getElementById('desmos-container').style.display === 'block';
                     if (isDesmosOpen) {
