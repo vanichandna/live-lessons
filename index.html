@@ -25,39 +25,60 @@
         .role-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15); }
         .btn-instructor { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; width: 100%; }
         .btn-student { background: transparent; color: white; border: 2px solid white; margin-top: 10px; }
-        .btn-text { background: transparent; color: #94a3b8; padding: 10px; box-shadow: none; }
-        .btn-text:hover { color: white; box-shadow: none; transform: none; }
 
-        /* Floating Modern Toolbar */
-        #toolbar-wrapper { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 100%; display: flex; justify-content: center; }
-        #toolbar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 12px 20px; display: flex; gap: 12px; align-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); pointer-events: auto; flex-wrap: wrap; max-width: 95vw; }
+        /* Top Info Bar */
+        #top-bar { position: fixed; top: 20px; left: 20px; right: 20px; z-index: 100; pointer-events: none; display: flex; justify-content: space-between; align-items: flex-start; }
         
-        #toolbar button, #toolbar select { padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; background: white; font-weight: 500; color: #334155; }
-        #toolbar button:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .instructor-only { display: none; }
+        .instructor-tag { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 10px 16px; border-radius: 12px; border: 1px solid #e2e8f0; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; }
+        #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: #eff6ff; padding: 4px 8px; border-radius: 4px;}
         
+        /* A/V & Action Controls (Top Right) */
+        #action-bar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; }
+        #action-bar button { padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer; background: white; font-weight: 500; color: #334155; transition: 0.2s; }
+        #action-bar button:hover { background: #f8fafc; }
         .primary-btn { background: #2563eb !important; color: white !important; border: none !important; }
         .primary-btn:hover { background: #1d4ed8 !important; }
         .danger-btn { background: #ef4444 !important; color: white !important; border: none !important; }
+
+        /* Premium Side Toolbar */
+        #side-toolbar { position: fixed; top: 50%; left: 20px; transform: translateY(-50%); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); z-index: 100; align-items: center; }
         
-        .instructor-only { display: none; align-items: center; gap: 12px; }
-        .instructor-tag { background: #eff6ff; padding: 10px 16px; border-radius: 8px; border: 1px solid #bfdbfe; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center;}
-        #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: white; padding: 4px 8px; border-radius: 4px;}
-        .divider { width: 1px; height: 32px; background: #e2e8f0; margin: 0 4px; }
+        .tool-btn { width: 44px; height: 44px; border-radius: 10px; border: none; background: transparent; font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; color: #64748b; }
+        .tool-btn:hover { background: #f1f5f9; color: #0f172a; }
+        .tool-btn.active { background: #eff6ff; color: #2563eb; box-shadow: inset 0 0 0 1px #bfdbfe; }
         
-        #color-picker { padding: 2px !important; width: 42px; height: 42px; cursor: pointer; border: 1px solid #e2e8f0; border-radius: 8px;}
-        input[type=range] { padding: 0 !important; cursor: pointer; }
+        .toolbar-divider { width: 32px; height: 1px; background: #e2e8f0; margin: 4px 0; }
         
+        /* Color Swatches */
+        .color-grid { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 1px #cbd5e1; cursor: pointer; transition: 0.2s; }
+        .color-btn.active { transform: scale(1.2); box-shadow: 0 0 0 2px #2563eb; }
+        
+        input[type=range] { width: 80px; transform: rotate(-90deg); margin: 40px 0; cursor: pointer; }
+
+        /* Pagination Footer */
+        #pagination-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid #e2e8f0; border-radius: 30px; padding: 8px 16px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); z-index: 100; font-weight: 600; color: #334155; }
+        .page-btn { background: transparent; border: none; font-size: 18px; color: #64748b; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .page-btn:hover { background: #f1f5f9; color: #0f172a; }
+
         /* 4-Way Scrollable Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
         canvas { background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; touch-action: none; }
         
+        /* Strictly Enforced Custom Cursors */
+        .cursor-pen { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
+        .cursor-highlighter { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
+        .cursor-eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23f1f5f9' stroke='%23475569' stroke-width='2'%3E%3Crect x='4' y='4' width='16' height='16' rx='4' ry='4'%3E%3C/rect%3E%3Cline x1='4' y1='12' x2='20' y2='12'%3E%3C/line%3E%3C/svg%3E") 12 12, crosshair !important; }
+        .cursor-pan { cursor: grab !important; }
+        .cursor-grabbing { cursor: grabbing !important; }
+
         /* Floating Panels */
-        .draggable-panel { display: none; position: fixed; z-index: 100; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; background: white; resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
+        .draggable-panel { display: none; position: fixed; z-index: 200; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; background: white; resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
         .drag-handle { background: #f8fafc; color: #334155; padding: 10px 16px; font-size: 14px; cursor: move; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
         
         #desmos-container { top: 100px; right: 30px; width: 500px; height: 550px; }
         #screenshare-container { top: 100px; left: 30px; width: 600px; height: 450px; }
-        
         #calculator { width: 100%; height: calc(100% - 40px); }
         #screenshare-video { width: 100%; height: calc(100% - 40px); background: #000; object-fit: contain; }
 
@@ -67,7 +88,7 @@
         #local-video { width: 140px; height: 105px; border: 2px solid white; }
         #remote-video { width: 280px; height: 210px; border: 3px solid #2563eb; display: none; }
         
-        #toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 500; display: none; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        #toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 500; display: none; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -75,7 +96,6 @@
     <div id="role-overlay">
         <h2 class="role-title">Live Mathematics Workspace</h2>
         
-        <!-- Step 1: Role Selection -->
         <div id="role-selection" style="display:flex; flex-direction:column; gap:20px; align-items:center;">
             <div class="auth-box">
                 <div style="color: #64748b; font-size: 14px; font-weight: 500;">Instructor Access</div>
@@ -85,55 +105,69 @@
             <button class="role-btn btn-student" onclick="initSession('student')">Join as Student</button>
         </div>
 
-        <!-- Step 2: Student Waiting Room -->
         <div id="student-entry" style="display:none; flex-direction:column; gap:20px; align-items:center;">
             <div class="auth-box">
                 <div style="color: #64748b; font-size: 14px; font-weight: 500;">Student Access</div>
                 <input type="text" id="join-id" placeholder="Enter Instructor's Room ID">
                 <button class="role-btn btn-instructor" id="connect-btn" onclick="joinRoom()">Enter Classroom</button>
             </div>
-            <button class="role-btn btn-text" onclick="backToRoles()">← Back</button>
         </div>
     </div>
 
-    <!-- Floating Toolbar -->
-    <div id="toolbar-wrapper">
-        <div id="toolbar">
-            <div id="instructor-tools" class="instructor-only">
-                <div class="instructor-tag">
-                    <span>Room ID:</span>
-                    <span id="my-id">Generating...</span>
-                </div>
-                <div class="divider"></div>
+    <!-- Top Status & A/V Bar -->
+    <div id="top-bar">
+        <div id="instructor-tools" class="instructor-only">
+            <div class="instructor-tag">
+                <span>Room ID:</span>
+                <span id="my-id">Generating...</span>
             </div>
-            
-            <select id="tool-select" onchange="updateToolState()">
-                <option value="pen">🖊️ Pen</option>
-                <option value="eraser">🧽 Eraser</option>
-                <option value="pan">✋ Pan Board</option>
-            </select>
-            <input type="color" id="color-picker" value="#0f172a" title="Marker Color">
-            <input type="range" id="line-width" min="1" max="20" value="3" title="Line Thickness">
-            <button onclick="recenterCanvas()" title="Return to center of board">🎯 Center</button>
-            <button id="btn-clear" onclick="clearCanvas()">🗑️ Clear</button>
-            
-            <div class="divider"></div>
-            
+        </div>
+        <div style="flex-grow: 1;"></div>
+        <div id="action-bar">
             <button id="btn-mute" onclick="toggleMute()">🎙️ Mute</button>
             <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
-            <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Share Screen</button>
+            <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Screen</button>
             <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
-            
-            <div class="divider"></div>
-            <button class="danger-btn" onclick="leaveClassroom()">End</button>
+            <button class="danger-btn" onclick="leaveClassroom()">End Session</button>
         </div>
+    </div>
+
+    <!-- Premium Side Toolbar -->
+    <div id="side-toolbar">
+        <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
+        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
+        <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
+        <button class="tool-btn" id="tool-pan" onclick="selectTool('pan')" title="Pan Board">✋</button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <div class="color-grid">
+            <div class="color-btn active" style="background: #0f172a;" onclick="selectColor('#0f172a', this)"></div>
+            <div class="color-btn" style="background: #2563eb;" onclick="selectColor('#2563eb', this)"></div>
+            <div class="color-btn" style="background: #ef4444;" onclick="selectColor('#ef4444', this)"></div>
+            <div class="color-btn" style="background: #16a34a;" onclick="selectColor('#16a34a', this)"></div>
+            <div class="color-btn" style="background: #f59e0b;" onclick="selectColor('#f59e0b', this)"></div>
+        </div>
+
+        <input type="range" id="line-width" min="1" max="20" value="3" title="Line Thickness">
+        
+        <!-- Clear Board securely isolated -->
+        <button class="tool-btn" id="btn-clear" onclick="clearCanvas()" title="Clear Page" style="color: #ef4444;">🗑️</button>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div id="pagination-bar">
+        <!-- Student's prev/next buttons will be hidden so only you control the pace -->
+        <button class="page-btn" id="btn-prev" onclick="changePage(-1)">◀</button>
+        <span id="page-indicator">Page 1</span>
+        <button class="page-btn" id="btn-next" onclick="changePage(1)">▶</button>
     </div>
     
     <div id="workspace">
-        <canvas id="whiteboard"></canvas>
+        <canvas id="whiteboard" class="cursor-pen"></canvas>
     </div>
 
-    <!-- Desmos Sync Panel -->
+    <!-- Floating Panels -->
     <div id="desmos-container" class="draggable-panel">
         <div id="desmos-drag-handle" class="drag-handle">
             <span>Graphing Calculator</span>
@@ -142,7 +176,6 @@
         <div id="calculator"></div>
     </div>
 
-    <!-- Screen Share Panel -->
     <div id="screenshare-container" class="draggable-panel">
         <div id="screenshare-drag-handle" class="drag-handle">
             <span>Shared Screen</span>
@@ -151,7 +184,6 @@
         <video id="screenshare-video" autoplay playsinline></video>
     </div>
 
-    <!-- Video Panel -->
     <div id="video-container">
         <video id="local-video" class="cam-video" autoplay muted playsinline></video>
         <video id="remote-video" class="cam-video" autoplay playsinline></video>
@@ -166,9 +198,9 @@
         const canvas = document.getElementById('whiteboard');
         const ctx = canvas.getContext('2d');
         const workspace = document.getElementById('workspace');
-        const toolSelect = document.getElementById('tool-select');
         
         const CANVAS_SIZE = 15000;
+        const PAGE_OFFSET = 2500; // Distance between pages on the massive canvas
         canvas.width = CANVAS_SIZE;
         canvas.height = CANVAS_SIZE;
 
@@ -181,28 +213,51 @@
         let lastX, lastY;
         let isReceivingDesmosState = false;
 
-        // Custom Tool Cursors for a Premium Feel
-        function updateToolState() {
-            const tool = toolSelect.value;
-            if (tool === 'pan') {
-                workspace.style.overflow = 'auto';
-                canvas.style.cursor = 'grab';
-            } else if (tool === 'eraser') {
-                workspace.style.overflow = 'hidden'; 
-                // SVG Eraser Cursor
-                canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 24 24' fill='%23f1f5f9' stroke='%23475569' stroke-width='2'%3E%3Crect x='4' y='4' width='16' height='16' rx='4' ry='4'%3E%3C/rect%3E%3Cline x1='4' y1='12' x2='20' y2='12'%3E%3C/line%3E%3C/svg%3E") 15 15, crosshair`;
-            } else {
-                workspace.style.overflow = 'hidden'; 
-                // SVG Pen Cursor (Point positioned perfectly at 2x 22y)
-                canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair`;
+        // Tool & State Management
+        let currentTool = 'pen';
+        let currentColor = '#0f172a';
+        let currentPage = 1;
+
+        function selectTool(tool) {
+            currentTool = tool;
+            
+            // Update UI
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tool-' + tool).classList.add('active');
+            
+            // Update Strict CSS Cursor
+            canvas.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing');
+            canvas.classList.add('cursor-' + tool);
+            
+            // Lock/Unlock workspace scrolling
+            workspace.style.overflow = tool === 'pan' ? 'auto' : 'hidden';
+        }
+
+        function selectColor(color, btnElement) {
+            currentColor = color;
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            
+            // Auto-switch to pen/highlighter if erasing/panning
+            if (currentTool === 'eraser' || currentTool === 'pan') {
+                selectTool('pen');
             }
         }
-        updateToolState();
 
-        // UI Gate Functions
-        function backToRoles() {
-            document.getElementById('student-entry').style.display = 'none';
-            document.getElementById('role-selection').style.display = 'flex';
+        function changePage(dir, emit = true) {
+            currentPage += dir;
+            if (currentPage < 1) currentPage = 1;
+            
+            document.getElementById('page-indicator').innerText = `Page ${currentPage}`;
+            
+            // Center the viewport on the newly selected page zone
+            const targetX = (CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET) - (window.innerWidth / 2);
+            workspace.scrollLeft = targetX;
+            workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
+            
+            if (emit && userRole === 'instructor') {
+                broadcast({ type: 'page', page: currentPage });
+            }
         }
 
         function verifyInstructor() {
@@ -214,22 +269,18 @@
             }
         }
 
-        // Panning Logic
-        function recenterCanvas() {
-            workspace.scrollLeft = (CANVAS_SIZE / 2) - (window.innerWidth / 2);
-            workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
-        }
-        recenterCanvas();
+        // Initialize view to Page 1
+        changePage(0, false);
 
+        // Panning Logic (Middle mouse or Space + Drag)
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
         
         workspace.addEventListener('pointerdown', (e) => {
-            const tool = toolSelect.value;
-            if (tool === 'pan' || e.button === 1 || e.shiftKey) { 
+            if (currentTool === 'pan' || e.button === 1 || e.shiftKey) { 
                 isPanning = true;
                 startPanX = e.clientX; startPanY = e.clientY;
                 startScrollLeft = workspace.scrollLeft; startScrollTop = workspace.scrollTop;
-                if (tool === 'pan') canvas.style.cursor = 'grabbing';
+                if (currentTool === 'pan') canvas.classList.replace('cursor-pan', 'cursor-grabbing');
                 e.preventDefault();
             }
         });
@@ -240,7 +291,7 @@
         });
         window.addEventListener('pointerup', () => { 
             isPanning = false; 
-            if (toolSelect.value === 'pan') canvas.style.cursor = 'grab';
+            if (currentTool === 'pan') canvas.classList.replace('cursor-grabbing', 'cursor-pan');
         });
 
         // Draggable Windows
@@ -253,8 +304,8 @@
                 isDraggingWin = true;
                 startX = e.clientX - el.offsetLeft;
                 startY = e.clientY - el.offsetTop;
-                document.querySelectorAll('.draggable-panel').forEach(p => p.style.zIndex = 100);
-                el.style.zIndex = 101;
+                document.querySelectorAll('.draggable-panel').forEach(p => p.style.zIndex = 200);
+                el.style.zIndex = 201;
             });
             document.addEventListener('mousemove', (e) => {
                 if (!isDraggingWin) return;
@@ -274,7 +325,6 @@
         let desmosSyncTimeout;
         calculator.observeEvent('change', () => {
             if (isReceivingDesmosState) return; 
-            
             clearTimeout(desmosSyncTimeout);
             desmosSyncTimeout = setTimeout(() => {
                 broadcast({ type: 'desmos-state', state: calculator.getState() });
@@ -284,35 +334,22 @@
         // WebRTC Initialization
         function initSession(role) {
             if (peer) return; 
-            
             userRole = role;
             
             navigator.mediaDevices.getUserMedia({ video: true, audio: true })
                 .then(stream => {
                     localStream = stream;
                     document.getElementById('local-video').srcObject = stream;
-                })
-                .catch(err => {
-                    console.log("Camera access bypassed/denied.");
-                });
+                }).catch(err => { console.log("Camera access bypassed/denied."); });
 
             peer = new Peer({
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                }
+                config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
             });
 
             peer.on('error', (err) => {
-                console.error("PeerJS Error:", err);
                 const btn = document.getElementById('connect-btn');
-                if (btn) {
-                    btn.innerText = "Enter Classroom";
-                    btn.style.pointerEvents = "auto";
-                }
-                alert("Connection Error: " + err.type + "\nPlease verify the ID is exactly correct.");
+                if (btn) { btn.innerText = "Enter Classroom"; btn.style.pointerEvents = "auto"; }
+                alert("Connection Error: " + err.type + "\nPlease verify the ID is correct.");
             });
 
             if (role === 'instructor') {
@@ -324,26 +361,25 @@
                 
                 peer.on('call', (call) => {
                     currentCall = call;
-                    if (localStream) call.answer(localStream);
-                    else call.answer();
-                    
+                    if (localStream) call.answer(localStream); else call.answer();
                     call.on('stream', (remoteStream) => {
-                        const remoteVideo = document.getElementById('remote-video');
-                        remoteVideo.srcObject = remoteStream;
-                        remoteVideo.style.display = 'block';
+                        document.getElementById('remote-video').srcObject = remoteStream;
+                        document.getElementById('remote-video').style.display = 'block';
                     });
                 });
                 
                 peer.on('connection', (conn) => {
                     setupDataConnection(conn);
-                    if (!connectedStudentIDs.includes(conn.peer)) {
-                        connectedStudentIDs.push(conn.peer);
-                    }
+                    if (!connectedStudentIDs.includes(conn.peer)) connectedStudentIDs.push(conn.peer);
                 });
             } else {
                 document.getElementById('role-selection').style.display = 'none';
                 document.getElementById('student-entry').style.display = 'flex';
+                
+                // Hide controls from student to guarantee Instructor drives the pace
                 document.getElementById('btn-clear').style.display = 'none';
+                document.getElementById('btn-prev').style.display = 'none';
+                document.getElementById('btn-next').style.display = 'none';
                 
                 peer.on('call', (call) => {
                     if (call.metadata && call.metadata.type === 'screenshare') {
@@ -371,9 +407,8 @@
             if (localStream) {
                 currentCall = peer.call(id, localStream);
                 currentCall.on('stream', (remoteStream) => {
-                    const remoteVideo = document.getElementById('remote-video');
-                    remoteVideo.srcObject = remoteStream;
-                    remoteVideo.style.display = 'block';
+                    document.getElementById('remote-video').srcObject = remoteStream;
+                    document.getElementById('remote-video').style.display = 'block';
                 });
             }
 
@@ -381,7 +416,7 @@
                 if (document.getElementById('role-overlay').style.display !== 'none') {
                     btn.innerText = "Enter Classroom";
                     btn.style.pointerEvents = "auto";
-                    alert("Connection timed out. Please check the Room ID and ensure the Instructor has the room open.");
+                    alert("Connection timed out. Please check the Room ID.");
                 }
             }, 8000);
         }
@@ -390,7 +425,7 @@
             connections.push(conn);
             conn.on('open', () => {
                 document.getElementById('role-overlay').style.display = 'none';
-                showToast("Securely connected to classroom!");
+                showToast("Connected to secure classroom!");
                 
                 if (userRole === 'instructor') {
                     const isDesmosOpen = document.getElementById('desmos-container').style.display === 'block';
@@ -398,6 +433,8 @@
                         conn.send({ type: 'desmos-toggle', show: true });
                         conn.send({ type: 'desmos-state', state: calculator.getState() });
                     }
+                    // Sync the student directly to the current page you are teaching on
+                    conn.send({ type: 'page', page: currentPage });
                 }
             });
             
@@ -408,6 +445,10 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                 } else if (data.type === 'image') {
                     drawImageFromData(data.src, data.x, data.y);
+                } else if (data.type === 'page') {
+                    // Force student to follow instructor's page turn
+                    currentPage = data.page - 1; // offset because changePage adds 1
+                    changePage(1, false);
                 } else if (data.type === 'stop-screenshare') {
                     document.getElementById('screenshare-container').style.display = 'none';
                 } else if (data.type === 'desmos-toggle') {
@@ -436,26 +477,37 @@
             ctx.beginPath();
             ctx.moveTo(x0, y0);
             ctx.lineTo(x1, y1);
+            
             if (tool === 'eraser') {
                 ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineWidth = width * 4; 
+                ctx.lineWidth = width * 5; 
+                ctx.globalAlpha = 1.0;
+            } else if (tool === 'highlighter') {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width * 4;
+                ctx.globalAlpha = 0.3; // Make it translucent like a marker
             } else {
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.strokeStyle = color;
                 ctx.lineWidth = width;
+                ctx.globalAlpha = 1.0;
             }
+            
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.stroke();
             ctx.closePath();
+            
+            // Reset state
             ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
 
             if (emit) broadcast({ type: 'draw', x0, y0, x1, y1, color, width, tool });
         }
 
         canvas.addEventListener('pointerdown', (e) => { 
-            const tool = toolSelect.value;
-            if (tool === 'pan' || e.button === 1 || e.shiftKey) return; 
+            if (currentTool === 'pan' || e.button === 1 || e.shiftKey) return; 
             
             isDrawing = true; 
             canvas.setPointerCapture(e.pointerId);
@@ -463,17 +515,16 @@
             const coords = getCoordinates(e); 
             lastX = coords.x; lastY = coords.y; 
             
-            drawLine(lastX, lastY, coords.x + 0.1, coords.y + 0.1, document.getElementById('color-picker').value, document.getElementById('line-width').value, tool, true);
+            drawLine(lastX, lastY, coords.x + 0.1, coords.y + 0.1, currentColor, document.getElementById('line-width').value, currentTool, true);
         });
         
         canvas.addEventListener('pointermove', (e) => {
             if (!isDrawing) return;
             
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-            
             for (let ev of events) {
                 const coords = getCoordinates(ev);
-                drawLine(lastX, lastY, coords.x, coords.y, document.getElementById('color-picker').value, document.getElementById('line-width').value, toolSelect.value, true);
+                drawLine(lastX, lastY, coords.x, coords.y, currentColor, document.getElementById('line-width').value, currentTool, true);
                 lastX = coords.x; lastY = coords.y;
             }
         });
