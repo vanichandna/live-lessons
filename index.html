@@ -62,7 +62,7 @@
         .page-btn { background: transparent; border: none; font-size: 18px; color: #64748b; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
         .page-btn:hover { background: #f1f5f9; color: #0f172a; }
 
-        /* 4-Way Scrollable Workspace */
+        /* Scrollable Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
         canvas { background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; touch-action: none; }
         
@@ -151,13 +151,11 @@
 
         <input type="range" id="line-width" min="1" max="20" value="3" title="Line Thickness">
         
-        <!-- Clear Board securely isolated -->
         <button class="tool-btn" id="btn-clear" onclick="clearCanvas()" title="Clear Page" style="color: #ef4444;">🗑️</button>
     </div>
 
     <!-- Pagination Footer -->
     <div id="pagination-bar">
-        <!-- Student's prev/next buttons will be hidden so only you control the pace -->
         <button class="page-btn" id="btn-prev" onclick="changePage(-1)">◀</button>
         <span id="page-indicator">Page 1</span>
         <button class="page-btn" id="btn-next" onclick="changePage(1)">▶</button>
@@ -194,13 +192,15 @@
     <script>
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
 
-        // Core Setup
+        // Core Setup - Highly optimized canvas size to prevent memory lag
         const canvas = document.getElementById('whiteboard');
-        const ctx = canvas.getContext('2d');
+        // Hardware accelerated zero-latency context
+        const ctx = canvas.getContext('2d', { desynchronized: true, willReadFrequently: false });
         const workspace = document.getElementById('workspace');
         
-        const CANVAS_SIZE = 15000;
-        const PAGE_OFFSET = 2500; // Distance between pages on the massive canvas
+        // 8000px gives plenty of infinite feel without overloading GPU rendering limits
+        const CANVAS_SIZE = 8000;
+        const PAGE_OFFSET = 2000; 
         canvas.width = CANVAS_SIZE;
         canvas.height = CANVAS_SIZE;
 
@@ -213,6 +213,15 @@
         let lastX, lastY;
         let isReceivingDesmosState = false;
 
+        // NETWORK BATCHING ENGINE - Completely eliminates writing lag
+        let drawBatch = [];
+        setInterval(() => {
+            if (drawBatch.length > 0) {
+                broadcast({ type: 'draw-batch', lines: drawBatch });
+                drawBatch = [];
+            }
+        }, 40); // Send data in bursts to avoid clogging the UI thread
+
         // Tool & State Management
         let currentTool = 'pen';
         let currentColor = '#0f172a';
@@ -220,16 +229,12 @@
 
         function selectTool(tool) {
             currentTool = tool;
-            
-            // Update UI
             document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tool-' + tool).classList.add('active');
             
-            // Update Strict CSS Cursor
             canvas.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing');
             canvas.classList.add('cursor-' + tool);
             
-            // Lock/Unlock workspace scrolling
             workspace.style.overflow = tool === 'pan' ? 'auto' : 'hidden';
         }
 
@@ -238,7 +243,6 @@
             document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
             btnElement.classList.add('active');
             
-            // Auto-switch to pen/highlighter if erasing/panning
             if (currentTool === 'eraser' || currentTool === 'pan') {
                 selectTool('pen');
             }
@@ -250,7 +254,6 @@
             
             document.getElementById('page-indicator').innerText = `Page ${currentPage}`;
             
-            // Center the viewport on the newly selected page zone
             const targetX = (CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET) - (window.innerWidth / 2);
             workspace.scrollLeft = targetX;
             workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
@@ -269,10 +272,9 @@
             }
         }
 
-        // Initialize view to Page 1
         changePage(0, false);
 
-        // Panning Logic (Middle mouse or Space + Drag)
+        // Panning Logic
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
         
         workspace.addEventListener('pointerdown', (e) => {
@@ -376,7 +378,6 @@
                 document.getElementById('role-selection').style.display = 'none';
                 document.getElementById('student-entry').style.display = 'flex';
                 
-                // Hide controls from student to guarantee Instructor drives the pace
                 document.getElementById('btn-clear').style.display = 'none';
                 document.getElementById('btn-prev').style.display = 'none';
                 document.getElementById('btn-next').style.display = 'none';
@@ -433,21 +434,22 @@
                         conn.send({ type: 'desmos-toggle', show: true });
                         conn.send({ type: 'desmos-state', state: calculator.getState() });
                     }
-                    // Sync the student directly to the current page you are teaching on
                     conn.send({ type: 'page', page: currentPage });
                 }
             });
             
             conn.on('data', (data) => {
-                if (data.type === 'draw') {
-                    drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width, data.tool, false);
+                if (data.type === 'draw-batch') {
+                    // Receive remote network strokes instantly
+                    data.lines.forEach(l => {
+                        drawLine(l.x0, l.y0, l.x1, l.y1, l.color, l.width, l.tool, false);
+                    });
                 } else if (data.type === 'clear') {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                 } else if (data.type === 'image') {
                     drawImageFromData(data.src, data.x, data.y);
                 } else if (data.type === 'page') {
-                    // Force student to follow instructor's page turn
-                    currentPage = data.page - 1; // offset because changePage adds 1
+                    currentPage = data.page - 1; 
                     changePage(1, false);
                 } else if (data.type === 'stop-screenshare') {
                     document.getElementById('screenshare-container').style.display = 'none';
@@ -486,7 +488,7 @@
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.strokeStyle = color;
                 ctx.lineWidth = width * 4;
-                ctx.globalAlpha = 0.3; // Make it translucent like a marker
+                ctx.globalAlpha = 0.3; 
             } else {
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.strokeStyle = color;
@@ -499,11 +501,13 @@
             ctx.stroke();
             ctx.closePath();
             
-            // Reset state
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
 
-            if (emit) broadcast({ type: 'draw', x0, y0, x1, y1, color, width, tool });
+            if (emit) {
+                // Queue for network instead of blocking thread
+                drawBatch.push({ x0, y0, x1, y1, color, width, tool });
+            }
         }
 
         canvas.addEventListener('pointerdown', (e) => { 
