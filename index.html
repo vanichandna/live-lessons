@@ -48,7 +48,6 @@
         input[type=range] { padding: 0 !important; cursor: pointer; }
         
         /* 4-Way Scrollable Workspace */
-        /* Changed overflow to hidden by default to prevent accidental scroll while drawing */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
         canvas { background: #ffffff; cursor: crosshair; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; touch-action: none; }
         
@@ -108,7 +107,6 @@
                 <div class="divider"></div>
             </div>
             
-            <!-- Added the Pan tool to the selector -->
             <select id="tool-select" onchange="updateToolState()">
                 <option value="pen">🖊️ Pen</option>
                 <option value="eraser">🧽 Eraser</option>
@@ -182,18 +180,18 @@
         let screenCalls = [];
         let lastX, lastY;
 
-        // --- NEW: Tool State Management ---
+        // Tool State Management
         function updateToolState() {
             const tool = toolSelect.value;
             if (tool === 'pan') {
-                workspace.style.overflow = 'auto'; // Allow scrolling
+                workspace.style.overflow = 'auto';
                 canvas.style.cursor = 'grab';
             } else {
-                workspace.style.overflow = 'hidden'; // Lock board completely for stable drawing
+                workspace.style.overflow = 'hidden'; 
                 canvas.style.cursor = 'crosshair';
             }
         }
-        updateToolState(); // Initialize state
+        updateToolState();
 
         // UI Gate Functions
         function backToRoles() {
@@ -210,7 +208,7 @@
             }
         }
 
-        // --- UPDATED: Panning Logic ---
+        // Panning Logic
         function recenterCanvas() {
             workspace.scrollLeft = (CANVAS_SIZE / 2) - (window.innerWidth / 2);
             workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
@@ -219,9 +217,8 @@
 
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
         
-        workspace.addEventListener('mousedown', (e) => {
+        workspace.addEventListener('pointerdown', (e) => {
             const tool = toolSelect.value;
-            // Activate pan if the pan tool is selected, or if middle mouse button/shift is held
             if (tool === 'pan' || e.button === 1 || e.shiftKey) { 
                 isPanning = true;
                 startPanX = e.clientX; startPanY = e.clientY;
@@ -230,12 +227,12 @@
                 e.preventDefault();
             }
         });
-        window.addEventListener('mousemove', (e) => {
+        window.addEventListener('pointermove', (e) => {
             if (!isPanning) return;
             workspace.scrollLeft = startScrollLeft - (e.clientX - startPanX);
             workspace.scrollTop = startScrollTop - (e.clientY - startPanY);
         });
-        window.addEventListener('mouseup', () => { 
+        window.addEventListener('pointerup', () => { 
             isPanning = false; 
             if (toolSelect.value === 'pan') canvas.style.cursor = 'grab';
         });
@@ -268,7 +265,6 @@
         const calculator = Desmos.GraphingCalculator(calcElement, { expressions: true, settingsMenu: true });
         new ResizeObserver(() => { calculator.resize(); }).observe(document.getElementById('desmos-container'));
 
-        // Desmos State Broadcasting
         let desmosSyncTimeout;
         calculator.observeEvent('change', () => {
             if (userRole === 'instructor') {
@@ -279,7 +275,7 @@
             }
         });
 
-        // Initialize WebRTC with STUN Servers
+        // WebRTC Initialization
         function initSession(role) {
             if (peer) return; 
             
@@ -354,7 +350,6 @@
             }
         }
 
-        // Student Connect Action
         function joinRoom() {
             const id = document.getElementById('join-id').value.trim();
             if (!id) return;
@@ -423,12 +418,11 @@
             });
         }
 
-        // --- UPDATED: Whiteboard Logic ---
+        // --- UPGRADED: High-Performance Pointer Drawing Engine ---
         function getCoordinates(e) {
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
+            // Pointer events inherently handle touch, pen, and mouse natively through clientX/clientY
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
 
         function drawLine(x0, y0, x1, y1, color, width, tool, emit) {
@@ -452,28 +446,40 @@
             if (emit) broadcast({ type: 'draw', x0, y0, x1, y1, color, width, tool });
         }
 
-        // Block drawing entirely if the pan tool is selected
-        canvas.addEventListener('mousedown', (e) => { 
+        canvas.addEventListener('pointerdown', (e) => { 
             const tool = toolSelect.value;
             if (tool === 'pan' || e.button === 1 || e.shiftKey) return; 
             
             isDrawing = true; 
+            // Lock pointer to canvas for perfectly smooth edge tracking
+            canvas.setPointerCapture(e.pointerId);
+            
             const coords = getCoordinates(e); 
             lastX = coords.x; lastY = coords.y; 
             
-            // Draw a single dot if they just click without moving
-            drawLine(lastX, lastY, coords.x, coords.y, document.getElementById('color-picker').value, document.getElementById('line-width').value, tool, true);
+            // Add tiny offset (+0.1) so a perfect dot renders instantly on touch without needing to drag
+            drawLine(lastX, lastY, coords.x + 0.1, coords.y + 0.1, document.getElementById('color-picker').value, document.getElementById('line-width').value, tool, true);
         });
         
-        canvas.addEventListener('mousemove', (e) => {
+        canvas.addEventListener('pointermove', (e) => {
             if (!isDrawing) return;
-            const coords = getCoordinates(e);
-            drawLine(lastX, lastY, coords.x, coords.y, document.getElementById('color-picker').value, document.getElementById('line-width').value, toolSelect.value, true);
-            lastX = coords.x; lastY = coords.y;
+            
+            // Collect extremely high-frequency intermediate pen strokes for buttery smooth curves
+            const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+            
+            for (let ev of events) {
+                const coords = getCoordinates(ev);
+                drawLine(lastX, lastY, coords.x, coords.y, document.getElementById('color-picker').value, document.getElementById('line-width').value, toolSelect.value, true);
+                lastX = coords.x; lastY = coords.y;
+            }
         });
         
-        canvas.addEventListener('mouseup', () => isDrawing = false);
-        canvas.addEventListener('mouseout', () => isDrawing = false);
+        canvas.addEventListener('pointerup', (e) => {
+            isDrawing = false;
+            canvas.releasePointerCapture(e.pointerId);
+        });
+        
+        canvas.addEventListener('pointercancel', () => isDrawing = false);
 
         // Images
         window.addEventListener('paste', function(e) {
