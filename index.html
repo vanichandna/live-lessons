@@ -3,77 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Live Math Workspace</title>
+    <title>Premium Live Math Masterclass</title>
     <!-- PeerJS for WebRTC -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Desmos API -->
     <script src="https://www.desmos.com/api/v1.8/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    <!-- Robust Font Loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; background: #eef2f6; overflow: hidden; }
+        /* Elite Base Styling */
+        * { box-sizing: border-box; }
+        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; background: #f4f4f5; overflow: hidden; }
         
         /* Premium Entry Gates */
-        #role-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 24px; }
-        .role-title { color: white; font-weight: 500; font-size: 28px; letter-spacing: -0.5px; margin-bottom: 10px; text-align: center; }
+        #role-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 24px; }
+        .role-title { color: white; font-weight: 500; font-size: 32px; letter-spacing: -0.5px; margin-bottom: 10px; text-align: center; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
         
-        .auth-box { background: white; padding: 30px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); text-align: center; min-width: 300px; }
-        .auth-box input { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; text-align: center; outline: none; }
-        .auth-box input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        .auth-box { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); text-align: center; width: 340px; border: 1px solid rgba(255,255,255,0.2); }
+        .auth-box input { padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; text-align: center; outline: none; background: #f8fafc; transition: all 0.2s; }
+        .auth-box input:focus { background: #ffffff; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
         
-        .role-btn { padding: 16px 36px; font-size: 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .role-btn { padding: 16px 24px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .role-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15); }
-        .btn-instructor { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; width: 100%; }
-        .btn-student { background: transparent; color: white; border: 2px solid white; margin-top: 10px; }
+        .btn-instructor { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; width: 100%; }
+        .btn-student { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.3); margin-top: 10px; }
+        .btn-student:hover { background: rgba(255,255,255,0.1); border-color: white; }
         .btn-text { background: transparent; color: #94a3b8; padding: 10px; box-shadow: none; }
         .btn-text:hover { color: white; box-shadow: none; transform: none; }
 
-        /* Floating Modern Toolbar */
-        #toolbar-wrapper { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 100%; display: flex; justify-content: center; }
-        #toolbar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 12px 20px; display: flex; gap: 12px; align-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); pointer-events: auto; flex-wrap: wrap; max-width: 95vw; }
+        /* Floating Glass Toolbars */
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); pointer-events: auto; }
+
+        /* Top Bar */
+        #top-bar { position: fixed; top: 24px; left: 24px; right: 24px; z-index: 100; pointer-events: none; display: flex; justify-content: space-between; align-items: flex-start; }
         
-        #toolbar button, #toolbar select { padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; background: white; font-weight: 500; color: #334155; }
-        #toolbar button:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .instructor-only { display: none; }
+        .instructor-tag { padding: 10px 18px; border-radius: 12px; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center; }
+        #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 6px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); }
         
-        .primary-btn { background: #2563eb !important; color: white !important; border: none !important; }
-        .primary-btn:hover { background: #1d4ed8 !important; }
-        .danger-btn { background: #ef4444 !important; color: white !important; border: none !important; }
+        #action-bar { padding: 8px; border-radius: 14px; display: flex; gap: 8px; }
+        #action-bar button { padding: 10px 16px; border: 1px solid transparent; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer; background: transparent; font-weight: 500; color: #334155; transition: all 0.2s; }
+        #action-bar button:hover { background: rgba(0,0,0,0.05); }
+        .primary-btn { background: #2563eb !important; color: white !important; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); }
+        .primary-btn:hover { background: #1d4ed8 !important; transform: translateY(-1px); }
+        .danger-btn { background: #fee2e2 !important; color: #ef4444 !important; }
+        .danger-btn:hover { background: #fca5a5 !important; }
+
+        /* Side Toolbar */
+        #side-toolbar { position: fixed; top: 50%; left: 24px; transform: translateY(-50%); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 100; align-items: center; }
         
-        .instructor-only { display: none; align-items: center; gap: 12px; }
-        .instructor-tag { background: #eff6ff; padding: 10px 16px; border-radius: 8px; border: 1px solid #bfdbfe; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center;}
-        #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: white; padding: 4px 8px; border-radius: 4px;}
-        .divider { width: 1px; height: 32px; background: #e2e8f0; margin: 0 4px; }
+        .tool-btn { width: 48px; height: 48px; border-radius: 12px; border: none; background: transparent; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; color: #64748b; }
+        .tool-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
+        .tool-btn.active { background: #eff6ff; color: #2563eb; box-shadow: inset 0 0 0 1.5px #bfdbfe; }
         
-        #color-picker { padding: 2px !important; width: 42px; height: 42px; cursor: pointer; border: 1px solid #e2e8f0; border-radius: 8px;}
-        input[type=range] { padding: 0 !important; cursor: pointer; }
+        .toolbar-divider { width: 36px; height: 1.5px; background: rgba(0,0,0,0.06); margin: 4px 0; }
         
-        /* 4-Way Scrollable Workspace */
+        /* Color Swatches */
+        .color-grid { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 1px #cbd5e1; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .color-btn.active { transform: scale(1.25); box-shadow: 0 0 0 2px #2563eb; }
+        
+        input[type=range] { width: 100px; transform: rotate(-90deg); margin: 50px 0; cursor: pointer; accent-color: #2563eb; }
+
+        /* Pagination Footer */
+        #pagination-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); border-radius: 30px; padding: 8px 16px; display: flex; align-items: center; gap: 15px; z-index: 100; font-weight: 600; color: #334155; }
+        .page-btn { background: transparent; border: none; font-size: 18px; color: #64748b; cursor: pointer; border-radius: 50%; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .page-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
+
+        /* Canvas Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
-        canvas { background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; touch-action: none; }
+        canvas { background: #ffffff; display: block; touch-action: none; }
         
-        /* Strictly Enforced Custom Cursors */
+        /* Enforced Cursors */
         .cursor-pen { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
         .cursor-highlighter { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
         .cursor-eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23f1f5f9' stroke='%23475569' stroke-width='2'%3E%3Crect x='4' y='4' width='16' height='16' rx='4' ry='4'%3E%3C/rect%3E%3Cline x1='4' y1='12' x2='20' y2='12'%3E%3C/line%3E%3C/svg%3E") 12 12, crosshair !important; }
         .cursor-pan { cursor: grab !important; }
         .cursor-grabbing { cursor: grabbing !important; }
 
-        /* Floating Panels */
-        .draggable-panel { display: none; position: fixed; z-index: 200; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; background: white; resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
-        .drag-handle { background: #f8fafc; color: #334155; padding: 10px 16px; font-size: 14px; cursor: move; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+        /* Floating App Panels */
+        .draggable-panel { display: none; position: fixed; z-index: 200; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.4); resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
+        .drag-handle { background: rgba(248, 250, 252, 0.9); backdrop-filter: blur(8px); color: #334155; padding: 12px 20px; font-size: 14px; cursor: move; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
         
-        #desmos-container { top: 100px; right: 30px; width: 500px; height: 550px; }
-        #screenshare-container { top: 100px; left: 30px; width: 600px; height: 450px; }
-        #calculator { width: 100%; height: calc(100% - 40px); }
-        #screenshare-video { width: 100%; height: calc(100% - 40px); background: #000; object-fit: contain; }
+        #desmos-container { top: 100px; right: 30px; width: 550px; height: 600px; }
+        #screenshare-container { top: 100px; left: 30px; width: 640px; height: 480px; }
+        #calculator { width: 100%; height: calc(100% - 45px); }
+        #screenshare-video { width: 100%; height: calc(100% - 45px); background: #000; object-fit: contain; }
 
-        /* Camera Video Panel */
+        /* Camera Panel */
         #video-container { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 16px; align-items: flex-end; z-index: 150; pointer-events: none; }
-        video.cam-video { background: #0f172a; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); pointer-events: auto; object-fit: cover; }
-        #local-video { width: 140px; height: 105px; border: 2px solid white; }
-        #remote-video { width: 280px; height: 210px; border: 3px solid #2563eb; display: none; }
+        video.cam-video { background: #0f172a; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); pointer-events: auto; object-fit: cover; border: 2px solid rgba(255,255,255,0.1); }
+        #local-video { width: 160px; height: 120px; }
+        #remote-video { width: 300px; height: 225px; display: none; border-color: #2563eb; }
         
-        #toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 500; display: none; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        /* Alerts */
+        #toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 14px 28px; border-radius: 30px; font-size: 15px; font-weight: 500; display: none; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
@@ -83,7 +110,7 @@
         
         <div id="role-selection" style="display:flex; flex-direction:column; gap:20px; align-items:center;">
             <div class="auth-box">
-                <div style="color: #64748b; font-size: 14px; font-weight: 500;">Instructor Access</div>
+                <div style="color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Instructor Access</div>
                 <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
                 <input type="text" id="custom-room-id" placeholder="Create Room Name (e.g. VaniMath)">
                 <button class="role-btn btn-instructor" onclick="verifyInstructor()">Open Classroom</button>
@@ -93,7 +120,7 @@
 
         <div id="student-entry" style="display:none; flex-direction:column; gap:20px; align-items:center;">
             <div class="auth-box">
-                <div style="color: #64748b; font-size: 14px; font-weight: 500;">Student Access</div>
+                <div style="color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Student Access</div>
                 <input type="text" id="join-id" placeholder="Enter the Room Name">
                 <button class="role-btn btn-instructor" id="connect-btn" onclick="joinRoom()">Enter Classroom</button>
             </div>
@@ -104,13 +131,13 @@
     <!-- Top Status & A/V Bar -->
     <div id="top-bar">
         <div id="instructor-tools" class="instructor-only">
-            <div class="instructor-tag">
-                <span>Room Name:</span>
+            <div class="instructor-tag glass-panel">
+                <span>Room:</span>
                 <span id="my-id">Loading...</span>
             </div>
         </div>
         <div style="flex-grow: 1;"></div>
-        <div id="action-bar">
+        <div id="action-bar" class="glass-panel">
             <button id="btn-mute" onclick="toggleMute()">🎙️ Mute</button>
             <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
             <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Screen</button>
@@ -120,7 +147,7 @@
     </div>
 
     <!-- Premium Side Toolbar -->
-    <div id="side-toolbar">
+    <div id="side-toolbar" class="glass-panel">
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
         <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
         <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
@@ -138,11 +165,12 @@
 
         <input type="range" id="line-width" min="1" max="20" value="3" title="Line Thickness">
         
+        <div class="toolbar-divider"></div>
         <button class="tool-btn" id="btn-clear" onclick="clearCanvas()" title="Purge Board History" style="color: #ef4444;">🗑️</button>
     </div>
 
     <!-- Pagination Footer -->
-    <div id="pagination-bar">
+    <div id="pagination-bar" class="glass-panel">
         <button class="page-btn" id="btn-prev" onclick="changePage(-1)">◀</button>
         <span id="page-indicator">Page 1</span>
         <button class="page-btn" id="btn-next" onclick="changePage(1)">▶</button>
@@ -153,7 +181,7 @@
     </div>
 
     <!-- Floating Panels -->
-    <div id="desmos-container" class="draggable-panel">
+    <div id="desmos-container" class="draggable-panel glass-panel">
         <div id="desmos-drag-handle" class="drag-handle">
             <span>Graphing Calculator</span>
             <span style="cursor:pointer; color:#ef4444;" onclick="toggleDesmos()">✕</span>
@@ -161,7 +189,7 @@
         <div id="calculator"></div>
     </div>
 
-    <div id="screenshare-container" class="draggable-panel">
+    <div id="screenshare-container" class="draggable-panel glass-panel">
         <div id="screenshare-drag-handle" class="drag-handle">
             <span>Shared Screen</span>
             <span style="cursor:pointer; color:#ef4444;" onclick="stopScreenShare()">✕</span>
@@ -178,8 +206,6 @@
 
     <script>
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
-
-        // Persistent Session History Array
         let boardHistory = [];
 
         window.onload = () => {
@@ -208,38 +234,27 @@
         let isReceivingDesmosState = false;
         let targetInstructorId = null;
 
-        // Network Batching & Auto-Save Engine
         let drawBatch = [];
         setInterval(() => {
             if (drawBatch.length > 0) {
                 broadcast({ type: 'draw-batch', lines: drawBatch });
-                
-                // Instructor silently saves all history to local storage
                 if (userRole === 'instructor') {
                     drawBatch.forEach(l => boardHistory.push({ type: 'draw', ...l }));
                     saveHistoryToStorage();
                 }
-                
                 drawBatch = [];
             }
         }, 40); 
 
         function saveHistoryToStorage() {
-            try {
-                localStorage.setItem('premium_math_history', JSON.stringify(boardHistory));
-            } catch (e) {
-                console.warn("Storage limit reached, running on active memory.");
-            }
+            try { localStorage.setItem('premium_math_history', JSON.stringify(boardHistory)); } 
+            catch (e) { console.warn("Storage limit reached."); }
         }
 
-        // Replay history instantly when instructor loads or student joins
         function replayHistory() {
             boardHistory.forEach(item => {
-                if (item.type === 'draw') {
-                    drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false);
-                } else if (item.type === 'image') {
-                    drawImageFromData(item.src, item.x, item.y, false);
-                }
+                if (item.type === 'draw') { drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false); } 
+                else if (item.type === 'image') { drawImageFromData(item.src, item.x, item.y, false); }
             });
         }
 
@@ -251,10 +266,8 @@
             currentTool = tool;
             document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tool-' + tool).classList.add('active');
-            
             canvas.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing');
             canvas.classList.add('cursor-' + tool);
-            
             workspace.style.overflow = tool === 'pan' ? 'auto' : 'hidden';
         }
 
@@ -262,25 +275,18 @@
             currentColor = color;
             document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
             btnElement.classList.add('active');
-            
-            if (currentTool === 'eraser' || currentTool === 'pan') {
-                selectTool('pen');
-            }
+            if (currentTool === 'eraser' || currentTool === 'pan') selectTool('pen');
         }
 
         function changePage(dir, emit = true) {
             currentPage += dir;
             if (currentPage < 1) currentPage = 1;
-            
             document.getElementById('page-indicator').innerText = `Page ${currentPage}`;
-            
             const targetX = (CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET) - (window.innerWidth / 2);
             workspace.scrollLeft = targetX;
             workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
-            
             if (emit && userRole === 'instructor') {
                 broadcast({ type: 'page', page: currentPage });
-                // Also save page state so we remember where we left off
                 localStorage.setItem('premium_math_page', currentPage);
             }
         }
@@ -298,12 +304,7 @@
         function verifyInstructor() {
             const enteredPin = document.getElementById('instructor-pin').value;
             const customId = document.getElementById('custom-room-id').value.trim();
-
-            if (!customId) {
-                alert("Please create a Room Name so your student can find you.");
-                return;
-            }
-
+            if (!customId) { alert("Please create a Room Name so your student can find you."); return; }
             const sanitizedId = customId.replace(/[^a-zA-Z0-9_-]/g, "");
 
             if (enteredPin === INSTRUCTOR_SECRET_PIN) {
@@ -314,13 +315,11 @@
             }
         }
 
-        // Panning Logic
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
         
         workspace.addEventListener('pointerdown', (e) => {
             if (currentTool === 'pan' || e.button === 1 || e.shiftKey) { 
-                isPanning = true;
-                startPanX = e.clientX; startPanY = e.clientY;
+                isPanning = true; startPanX = e.clientX; startPanY = e.clientY;
                 startScrollLeft = workspace.scrollLeft; startScrollTop = workspace.scrollTop;
                 if (currentTool === 'pan') canvas.classList.replace('cursor-pan', 'cursor-grabbing');
                 e.preventDefault();
@@ -342,16 +341,13 @@
             let isDraggingWin = false, startX, startY;
 
             handle.addEventListener('mousedown', (e) => {
-                isDraggingWin = true;
-                startX = e.clientX - el.offsetLeft;
-                startY = e.clientY - el.offsetTop;
+                isDraggingWin = true; startX = e.clientX - el.offsetLeft; startY = e.clientY - el.offsetTop;
                 document.querySelectorAll('.draggable-panel').forEach(p => p.style.zIndex = 200);
                 el.style.zIndex = 201;
             });
             document.addEventListener('mousemove', (e) => {
                 if (!isDraggingWin) return;
-                el.style.left = (e.clientX - startX) + 'px';
-                el.style.top = (e.clientY - startY) + 'px';
+                el.style.left = (e.clientX - startX) + 'px'; el.style.top = (e.clientY - startY) + 'px';
             });
             document.addEventListener('mouseup', () => { isDraggingWin = false; });
         }
@@ -365,16 +361,9 @@
         let desmosSyncTimeout;
         calculator.observeEvent('change', () => {
             if (isReceivingDesmosState) return; 
-            
-            // Save instructor desmos state persistently
-            if (userRole === 'instructor') {
-                localStorage.setItem('premium_math_desmos', JSON.stringify(calculator.getState()));
-            }
-
+            if (userRole === 'instructor') localStorage.setItem('premium_math_desmos', JSON.stringify(calculator.getState()));
             clearTimeout(desmosSyncTimeout);
-            desmosSyncTimeout = setTimeout(() => {
-                broadcast({ type: 'desmos-state', state: calculator.getState() });
-            }, 200);
+            desmosSyncTimeout = setTimeout(() => { broadcast({ type: 'desmos-state', state: calculator.getState() }); }, 200);
         });
 
         function initSession(role, roomId = null) {
@@ -387,22 +376,15 @@
                     document.getElementById('local-video').srcObject = stream;
                 }).catch(err => { console.log("Camera access bypassed/denied."); });
 
-            const peerConfig = {
-                config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
-            };
+            const peerConfig = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
-            if (role === 'instructor' && roomId) {
-                peer = new Peer(roomId, peerConfig);
-            } else {
-                peer = new Peer(peerConfig);
-            }
+            if (role === 'instructor' && roomId) peer = new Peer(roomId, peerConfig);
+            else peer = new Peer(peerConfig);
 
             peer.on('error', (err) => {
-                console.error("PeerJS Error:", err);
                 if (err.type === 'unavailable-id' && role === 'instructor') {
                     alert(`The Room Name "${roomId}" is currently taken. Please refresh and choose a unique name.`);
-                    location.reload();
-                    return;
+                    location.reload(); return;
                 }
                 const btn = document.getElementById('connect-btn');
                 if (btn) { btn.innerText = "Enter Classroom"; btn.style.pointerEvents = "auto"; }
@@ -415,26 +397,10 @@
                 
                 peer.on('open', (id) => { 
                     document.getElementById('my-id').innerText = id; 
-                    
-                    // Restore Board History on Load
                     const savedHistory = localStorage.getItem('premium_math_history');
-                    if (savedHistory) {
-                        try {
-                            boardHistory = JSON.parse(savedHistory);
-                            replayHistory();
-                        } catch(e) {}
-                    }
-
-                    // Restore Page Location on Load
+                    if (savedHistory) { try { boardHistory = JSON.parse(savedHistory); replayHistory(); } catch(e) {} }
                     const savedPage = localStorage.getItem('premium_math_page');
-                    if (savedPage) {
-                        currentPage = parseInt(savedPage) - 1;
-                        changePage(1, false);
-                    } else {
-                        changePage(0, false);
-                    }
-
-                    // Restore Desmos State on Load
+                    if (savedPage) { currentPage = parseInt(savedPage) - 1; changePage(1, false); } else { changePage(0, false); }
                     const savedDesmos = localStorage.getItem('premium_math_desmos');
                     if (savedDesmos) {
                         isReceivingDesmosState = true;
@@ -459,7 +425,6 @@
             } else {
                 document.getElementById('role-selection').style.display = 'none';
                 document.getElementById('student-entry').style.display = 'flex';
-                
                 document.getElementById('btn-clear').style.display = 'none';
                 document.getElementById('btn-prev').style.display = 'none';
                 document.getElementById('btn-next').style.display = 'none';
@@ -486,19 +451,14 @@
             if (!peer) initSession('student');
 
             const btn = document.getElementById('connect-btn');
-            btn.innerText = "Connecting...";
-            btn.style.pointerEvents = "none";
+            btn.innerText = "Connecting..."; btn.style.pointerEvents = "none";
             
-            if (peer.open) {
-                executeConnection(sanitizedTargetId);
-            } else {
-                peer.on('open', () => executeConnection(sanitizedTargetId));
-            }
+            if (peer.open) executeConnection(sanitizedTargetId);
+            else peer.on('open', () => executeConnection(sanitizedTargetId));
 
             setTimeout(() => {
                 if (document.getElementById('role-overlay').style.display !== 'none') {
-                    btn.innerText = "Enter Classroom";
-                    btn.style.pointerEvents = "auto";
+                    btn.innerText = "Enter Classroom"; btn.style.pointerEvents = "auto";
                     alert("Connection timed out. Please verify the Room Name.");
                 }
             }, 8000);
@@ -507,7 +467,6 @@
         function executeConnection(targetId) {
             const conn = peer.connect(targetId);
             setupDataConnection(conn);
-
             if (localStream) {
                 currentCall = peer.call(targetId, localStream);
                 currentCall.on('stream', (remoteStream) => {
@@ -524,40 +483,28 @@
                 showToast("Connected to secure classroom!");
                 
                 if (userRole === 'instructor') {
-                    // Send entire board history instantly upon connection
-                    if (boardHistory.length > 0) {
-                        conn.send({ type: 'history-sync', history: boardHistory });
-                    }
-
-                    const isDesmosOpen = document.getElementById('desmos-container').style.display === 'block';
-                    if (isDesmosOpen) {
+                    if (boardHistory.length > 0) conn.send({ type: 'history-sync', history: boardHistory });
+                    if (document.getElementById('desmos-container').style.display === 'block') {
                         conn.send({ type: 'desmos-toggle', show: true });
                         conn.send({ type: 'desmos-state', state: calculator.getState() });
                     }
                     conn.send({ type: 'page', page: currentPage });
                 } else {
-                    // Student sets canvas size to start fresh before syncing
                     changePage(0, false); 
                 }
             });
             
             conn.on('data', (data) => {
                 if (data.type === 'history-sync') {
-                    // Pre-load all content written before the student joined
-                    boardHistory = data.history;
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    replayHistory();
+                    boardHistory = data.history; ctx.clearRect(0, 0, canvas.width, canvas.height); replayHistory();
                 } else if (data.type === 'draw-batch') {
                     data.lines.forEach(l => {
                         drawLine(l.x0, l.y0, l.x1, l.y1, l.color, l.width, l.tool, false);
-                        if (userRole === 'instructor') {
-                            boardHistory.push({ type: 'draw', ...l });
-                        }
+                        if (userRole === 'instructor') boardHistory.push({ type: 'draw', ...l });
                     });
                     if (userRole === 'instructor') saveHistoryToStorage();
                 } else if (data.type === 'clear') {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    boardHistory = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); boardHistory = [];
                 } else if (data.type === 'image') {
                     drawImageFromData(data.src, data.x, data.y, false);
                     if (userRole === 'instructor') {
@@ -565,8 +512,7 @@
                         saveHistoryToStorage();
                     }
                 } else if (data.type === 'page') {
-                    currentPage = data.page - 1; 
-                    changePage(1, false);
+                    currentPage = data.page - 1; changePage(1, false);
                 } else if (data.type === 'stop-screenshare') {
                     document.getElementById('screenshare-container').style.display = 'none';
                 } else if (data.type === 'desmos-toggle') {
@@ -581,15 +527,13 @@
 
             conn.on('close', () => {
                 if (userRole === 'student' && targetInstructorId) {
-                    showToast("Instructor disconnected. Reconnecting automatically...");
-                    
+                    showToast("Instructor disconnected. Reconnecting...");
                     document.getElementById('role-overlay').style.display = 'flex';
                     document.getElementById('role-selection').style.display = 'none';
                     document.getElementById('student-entry').style.display = 'flex';
                     
                     const btn = document.getElementById('connect-btn');
-                    btn.innerText = "Reconnecting...";
-                    btn.style.pointerEvents = "none";
+                    btn.innerText = "Reconnecting..."; btn.style.pointerEvents = "none";
 
                     setTimeout(() => {
                         document.getElementById('join-id').value = targetInstructorId;
@@ -600,9 +544,7 @@
         }
 
         function broadcast(data) {
-            connections.forEach(conn => {
-                if (conn.open) conn.send(data);
-            });
+            connections.forEach(conn => { if (conn.open) conn.send(data); });
         }
 
         function getCoordinates(e) {
@@ -612,53 +554,31 @@
 
         function drawLine(x0, y0, x1, y1, color, width, tool, emit) {
             ctx.beginPath();
-            ctx.moveTo(x0, y0);
-            ctx.lineTo(x1, y1);
+            ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
             
             if (tool === 'eraser') {
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineWidth = width * 5; 
-                ctx.globalAlpha = 1.0;
+                ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = width * 5; ctx.globalAlpha = 1.0;
             } else if (tool === 'highlighter') {
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.strokeStyle = color;
-                ctx.lineWidth = width * 4;
-                ctx.globalAlpha = 0.3; 
+                ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = width * 4; ctx.globalAlpha = 0.3; 
             } else {
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.strokeStyle = color;
-                ctx.lineWidth = width;
-                ctx.globalAlpha = 1.0;
+                ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = width; ctx.globalAlpha = 1.0;
             }
             
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.stroke();
-            ctx.closePath();
-            
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1.0;
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); ctx.closePath();
+            ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1.0;
 
-            if (emit) {
-                drawBatch.push({ x0, y0, x1, y1, color, width, tool });
-            }
+            if (emit) drawBatch.push({ x0, y0, x1, y1, color, width, tool });
         }
 
         canvas.addEventListener('pointerdown', (e) => { 
             if (currentTool === 'pan' || e.button === 1 || e.shiftKey) return; 
-            
-            isDrawing = true; 
-            canvas.setPointerCapture(e.pointerId);
-            
-            const coords = getCoordinates(e); 
-            lastX = coords.x; lastY = coords.y; 
-            
+            isDrawing = true; canvas.setPointerCapture(e.pointerId);
+            const coords = getCoordinates(e); lastX = coords.x; lastY = coords.y; 
             drawLine(lastX, lastY, coords.x + 0.1, coords.y + 0.1, currentColor, document.getElementById('line-width').value, currentTool, true);
         });
         
         canvas.addEventListener('pointermove', (e) => {
             if (!isDrawing) return;
-            
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
             for (let ev of events) {
                 const coords = getCoordinates(ev);
@@ -667,19 +587,14 @@
             }
         });
         
-        canvas.addEventListener('pointerup', (e) => {
-            isDrawing = false;
-            canvas.releasePointerCapture(e.pointerId);
-        });
-        
+        canvas.addEventListener('pointerup', (e) => { isDrawing = false; canvas.releasePointerCapture(e.pointerId); });
         canvas.addEventListener('pointercancel', () => isDrawing = false);
 
         window.addEventListener('paste', function(e) {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile();
-                    const reader = new FileReader();
+                    const blob = items[i].getAsFile(); const reader = new FileReader();
                     reader.onload = function(event) {
                         const base64data = event.target.result;
                         const x = workspace.scrollLeft + (window.innerWidth / 2) - 200;
@@ -695,7 +610,6 @@
             const img = new Image();
             img.onload = function() { ctx.drawImage(img, x, y); };
             img.src = src;
-            
             if (emit && userRole === 'instructor') {
                 boardHistory.push({ type: 'image', src: src, x: x, y: y });
                 saveHistoryToStorage();
@@ -703,13 +617,11 @@
             }
         }
 
-        // Master Purge Function
         function clearCanvas() {
             if (userRole === 'instructor') {
-                if (confirm("Are you sure you want to permanently purge all pages and clear the board history?")) {
+                if (confirm("Permanently purge all pages and clear board history?")) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    boardHistory = [];
-                    localStorage.removeItem('premium_math_history');
+                    boardHistory = []; localStorage.removeItem('premium_math_history');
                     broadcast({ type: 'clear' });
                 }
             }
@@ -734,10 +646,7 @@
         }
 
         async function toggleScreenShare() {
-            if (screenStream) {
-                stopScreenShare();
-                return;
-            }
+            if (screenStream) { stopScreenShare(); return; }
             try {
                 screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                 document.getElementById('screenshare-video').srcObject = screenStream;
@@ -751,19 +660,12 @@
 
                 screenStream.getVideoTracks()[0].onended = () => { stopScreenShare(); };
                 showToast("Screen sharing started.");
-            } catch (e) {
-                console.error("Screen share error", e);
-            }
+            } catch (e) { console.error("Screen share error", e); }
         }
 
         function stopScreenShare() {
-            if (screenStream) {
-                screenStream.getTracks().forEach(t => t.stop());
-                screenStream = null;
-            }
-            screenCalls.forEach(call => call.close());
-            screenCalls = [];
-            
+            if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+            screenCalls.forEach(call => call.close()); screenCalls = [];
             document.getElementById('screenshare-container').style.display = 'none';
             document.getElementById('btn-screen').innerText = "📺 Share Screen";
             broadcast({ type: 'stop-screenshare' });
@@ -774,13 +676,9 @@
             const panel = document.getElementById('desmos-container');
             const isShowing = panel.style.display !== 'block';
             panel.style.display = isShowing ? 'block' : 'none';
-            
             if (isShowing) calculator.resize();
-            
             broadcast({ type: 'desmos-toggle', show: isShowing });
-            if (isShowing) {
-                broadcast({ type: 'desmos-state', state: calculator.getState() });
-            }
+            if (isShowing) broadcast({ type: 'desmos-state', state: calculator.getState() });
         }
 
         function leaveClassroom() {
@@ -788,14 +686,13 @@
                 if (peer) peer.destroy();
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
                 if (screenStream) screenStream.getTracks().forEach(track => track.stop());
-                document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center;'><h1 style='color: #334155;'>Session Ended. Board state has been securely saved.</h1></div>";
+                document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center;'><h1 style='color: #334155;'>Session Ended. Board state securely saved.</h1></div>";
             }
         }
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.style.display = 'block';
+            toast.innerText = msg; toast.style.display = 'block';
             setTimeout(() => { toast.style.display = 'none'; }, 3000);
         }
     </script>
