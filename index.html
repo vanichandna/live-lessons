@@ -37,7 +37,7 @@
         /* Floating Glass Toolbars */
         .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); pointer-events: auto; }
 
-        /* Top Bar - Z-index bumped to 110 to ensure it stays strictly on top */
+        /* Top Bar */
         #top-bar { position: fixed; top: 24px; left: 24px; right: 24px; z-index: 110; pointer-events: none; display: flex; justify-content: space-between; align-items: flex-start; }
         
         .instructor-only { display: none; }
@@ -52,7 +52,7 @@
         .danger-btn { background: #fee2e2 !important; color: #ef4444 !important; }
         .danger-btn:hover { background: #fca5a5 !important; }
 
-        /* Side Toolbar - Transform removed, firmly pinned 90px from the top */
+        /* Side Toolbar */
         #side-toolbar { position: fixed; top: 90px; left: 24px; transform: none; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 100; align-items: center; max-height: calc(100vh - 180px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
         #side-toolbar::-webkit-scrollbar { display: none; }
         
@@ -114,7 +114,7 @@
                 <div style="color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Instructor Access</div>
                 <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
                 <input type="text" id="custom-room-id" placeholder="Create Room Name (e.g. VaniMath)">
-                <button class="role-btn btn-instructor" onclick="verifyInstructor()">Open Classroom</button>
+                <button class="role-btn btn-instructor" id="btn-open-classroom" onclick="verifyInstructor()">Open Classroom</button>
             </div>
             <button class="role-btn btn-student" onclick="showStudentEntry()">Join as Student</button>
         </div>
@@ -302,15 +302,22 @@
             document.getElementById('role-selection').style.display = 'flex';
         }
 
-        function verifyInstructor() {
+        // UPGRADED: Async function to ensure camera loads before connecting
+        async function verifyInstructor() {
             const enteredPin = document.getElementById('instructor-pin').value;
             const customId = document.getElementById('custom-room-id').value.trim();
             if (!customId) { alert("Please create a Room Name so your student can find you."); return; }
             const sanitizedId = customId.replace(/[^a-zA-Z0-9_-]/g, "");
 
             if (enteredPin === INSTRUCTOR_SECRET_PIN) {
+                const btn = document.getElementById('btn-open-classroom');
+                const originalText = btn.innerText;
+                btn.innerText = "Starting Camera...";
+                
                 localStorage.setItem('premium_math_last_room', sanitizedId);
-                initSession('instructor', sanitizedId);
+                await initSession('instructor', sanitizedId);
+                
+                btn.innerText = originalText;
             } else {
                 alert("Incorrect PIN. Only the authorized instructor can open a classroom.");
             }
@@ -367,15 +374,17 @@
             desmosSyncTimeout = setTimeout(() => { broadcast({ type: 'desmos-state', state: calculator.getState() }); }, 200);
         });
 
-        function initSession(role, roomId = null) {
+        // UPGRADED: Awaits the camera stream strictly before building the WebRTC connection
+        async function initSession(role, roomId = null) {
             if (peer) return; 
             userRole = role;
             
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                .then(stream => {
-                    localStream = stream;
-                    document.getElementById('local-video').srcObject = stream;
-                }).catch(err => { console.log("Camera access bypassed/denied."); });
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+            } catch(err) {
+                console.log("Camera access bypassed/denied by user.");
+            }
 
             const peerConfig = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
@@ -442,17 +451,20 @@
             }
         }
 
-        function joinRoom() {
+        // UPGRADED: Awaits the camera process for the student before initiating the call
+        async function joinRoom() {
             const customInstructorId = document.getElementById('join-id').value.trim();
             if (!customInstructorId) return;
             
             const sanitizedTargetId = customInstructorId.replace(/[^a-zA-Z0-9_-]/g, "");
             targetInstructorId = sanitizedTargetId; 
             
-            if (!peer) initSession('student');
-
             const btn = document.getElementById('connect-btn');
             btn.innerText = "Connecting..."; btn.style.pointerEvents = "none";
+            
+            if (!peer) {
+                await initSession('student');
+            }
             
             if (peer.open) executeConnection(sanitizedTargetId);
             else peer.on('open', () => executeConnection(sanitizedTargetId));
