@@ -25,44 +25,29 @@
         .role-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15); }
         .btn-instructor { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; width: 100%; }
         .btn-student { background: transparent; color: white; border: 2px solid white; margin-top: 10px; }
+        .btn-text { background: transparent; color: #94a3b8; padding: 10px; box-shadow: none; }
+        .btn-text:hover { color: white; box-shadow: none; transform: none; }
 
-        /* Top Info Bar */
-        #top-bar { position: fixed; top: 20px; left: 20px; right: 20px; z-index: 100; pointer-events: none; display: flex; justify-content: space-between; align-items: flex-start; }
+        /* Floating Modern Toolbar */
+        #toolbar-wrapper { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 100%; display: flex; justify-content: center; }
+        #toolbar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 12px 20px; display: flex; gap: 12px; align-items: center; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); pointer-events: auto; flex-wrap: wrap; max-width: 95vw; }
         
-        .instructor-only { display: none; }
-        .instructor-tag { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 10px 16px; border-radius: 12px; border: 1px solid #e2e8f0; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; }
-        #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: #eff6ff; padding: 4px 8px; border-radius: 4px;}
+        #toolbar button, #toolbar select { padding: 10px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; background: white; font-weight: 500; color: #334155; }
+        #toolbar button:hover { background: #f8fafc; border-color: #cbd5e1; }
         
-        /* A/V & Action Controls (Top Right) */
-        #action-bar { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); pointer-events: auto; }
-        #action-bar button { padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer; background: white; font-weight: 500; color: #334155; transition: 0.2s; }
-        #action-bar button:hover { background: #f8fafc; }
         .primary-btn { background: #2563eb !important; color: white !important; border: none !important; }
         .primary-btn:hover { background: #1d4ed8 !important; }
         .danger-btn { background: #ef4444 !important; color: white !important; border: none !important; }
-
-        /* Premium Side Toolbar */
-        #side-toolbar { position: fixed; top: 50%; left: 20px; transform: translateY(-50%); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); z-index: 100; align-items: center; }
         
-        .tool-btn { width: 44px; height: 44px; border-radius: 10px; border: none; background: transparent; font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; color: #64748b; }
-        .tool-btn:hover { background: #f1f5f9; color: #0f172a; }
-        .tool-btn.active { background: #eff6ff; color: #2563eb; box-shadow: inset 0 0 0 1px #bfdbfe; }
+        .instructor-only { display: none; align-items: center; gap: 12px; }
+        .instructor-tag { background: #eff6ff; padding: 10px 16px; border-radius: 8px; border: 1px solid #bfdbfe; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center;}
+        #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: white; padding: 4px 8px; border-radius: 4px;}
+        .divider { width: 1px; height: 32px; background: #e2e8f0; margin: 0 4px; }
         
-        .toolbar-divider { width: 32px; height: 1px; background: #e2e8f0; margin: 4px 0; }
+        #color-picker { padding: 2px !important; width: 42px; height: 42px; cursor: pointer; border: 1px solid #e2e8f0; border-radius: 8px;}
+        input[type=range] { padding: 0 !important; cursor: pointer; }
         
-        /* Color Swatches */
-        .color-grid { display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 1px #cbd5e1; cursor: pointer; transition: 0.2s; }
-        .color-btn.active { transform: scale(1.2); box-shadow: 0 0 0 2px #2563eb; }
-        
-        input[type=range] { width: 80px; transform: rotate(-90deg); margin: 40px 0; cursor: pointer; }
-
-        /* Pagination Footer */
-        #pagination-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid #e2e8f0; border-radius: 30px; padding: 8px 16px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); z-index: 100; font-weight: 600; color: #334155; }
-        .page-btn { background: transparent; border: none; font-size: 18px; color: #64748b; cursor: pointer; border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
-        .page-btn:hover { background: #f1f5f9; color: #0f172a; }
-
-        /* Scrollable Workspace */
+        /* 4-Way Scrollable Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
         canvas { background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; touch-action: none; }
         
@@ -100,17 +85,19 @@
             <div class="auth-box">
                 <div style="color: #64748b; font-size: 14px; font-weight: 500;">Instructor Access</div>
                 <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
+                <input type="text" id="custom-room-id" placeholder="Create Room Name (e.g. VaniMath)">
                 <button class="role-btn btn-instructor" onclick="verifyInstructor()">Open Classroom</button>
             </div>
-            <button class="role-btn btn-student" onclick="initSession('student')">Join as Student</button>
+            <button class="role-btn btn-student" onclick="showStudentEntry()">Join as Student</button>
         </div>
 
         <div id="student-entry" style="display:none; flex-direction:column; gap:20px; align-items:center;">
             <div class="auth-box">
                 <div style="color: #64748b; font-size: 14px; font-weight: 500;">Student Access</div>
-                <input type="text" id="join-id" placeholder="Enter Instructor's Room ID">
+                <input type="text" id="join-id" placeholder="Enter the Room Name">
                 <button class="role-btn btn-instructor" id="connect-btn" onclick="joinRoom()">Enter Classroom</button>
             </div>
+            <button class="role-btn btn-text" onclick="backToRoles()">← Back</button>
         </div>
     </div>
 
@@ -118,8 +105,8 @@
     <div id="top-bar">
         <div id="instructor-tools" class="instructor-only">
             <div class="instructor-tag">
-                <span>Room ID:</span>
-                <span id="my-id">Generating...</span>
+                <span>Room Name:</span>
+                <span id="my-id">Loading...</span>
             </div>
         </div>
         <div style="flex-grow: 1;"></div>
@@ -151,7 +138,7 @@
 
         <input type="range" id="line-width" min="1" max="20" value="3" title="Line Thickness">
         
-        <button class="tool-btn" id="btn-clear" onclick="clearCanvas()" title="Clear Page" style="color: #ef4444;">🗑️</button>
+        <button class="tool-btn" id="btn-clear" onclick="clearCanvas()" title="Purge Board History" style="color: #ef4444;">🗑️</button>
     </div>
 
     <!-- Pagination Footer -->
@@ -192,7 +179,16 @@
     <script>
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
 
-        // Core Setup - Highly optimized canvas size to prevent memory lag
+        // Persistent Session History Array
+        let boardHistory = [];
+
+        window.onload = () => {
+            const savedRoom = localStorage.getItem('premium_math_last_room');
+            if (savedRoom) {
+                document.getElementById('custom-room-id').value = savedRoom;
+            }
+        };
+
         const canvas = document.getElementById('whiteboard');
         const ctx = canvas.getContext('2d', { desynchronized: true, willReadFrequently: false });
         const workspace = document.getElementById('workspace');
@@ -210,20 +206,43 @@
         let screenCalls = [];
         let lastX, lastY;
         let isReceivingDesmosState = false;
-
-        // TARGET INSTRUCTOR ID FOR AUTO-RECONNECT
         let targetInstructorId = null;
 
-        // NETWORK BATCHING ENGINE 
+        // Network Batching & Auto-Save Engine
         let drawBatch = [];
         setInterval(() => {
             if (drawBatch.length > 0) {
                 broadcast({ type: 'draw-batch', lines: drawBatch });
+                
+                // Instructor silently saves all history to local storage
+                if (userRole === 'instructor') {
+                    drawBatch.forEach(l => boardHistory.push({ type: 'draw', ...l }));
+                    saveHistoryToStorage();
+                }
+                
                 drawBatch = [];
             }
         }, 40); 
 
-        // Tool & State Management
+        function saveHistoryToStorage() {
+            try {
+                localStorage.setItem('premium_math_history', JSON.stringify(boardHistory));
+            } catch (e) {
+                console.warn("Storage limit reached, running on active memory.");
+            }
+        }
+
+        // Replay history instantly when instructor loads or student joins
+        function replayHistory() {
+            boardHistory.forEach(item => {
+                if (item.type === 'draw') {
+                    drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false);
+                } else if (item.type === 'image') {
+                    drawImageFromData(item.src, item.x, item.y, false);
+                }
+            });
+        }
+
         let currentTool = 'pen';
         let currentColor = '#0f172a';
         let currentPage = 1;
@@ -261,19 +280,39 @@
             
             if (emit && userRole === 'instructor') {
                 broadcast({ type: 'page', page: currentPage });
+                // Also save page state so we remember where we left off
+                localStorage.setItem('premium_math_page', currentPage);
             }
+        }
+
+        function showStudentEntry() {
+            document.getElementById('role-selection').style.display = 'none';
+            document.getElementById('student-entry').style.display = 'flex';
+        }
+
+        function backToRoles() {
+            document.getElementById('student-entry').style.display = 'none';
+            document.getElementById('role-selection').style.display = 'flex';
         }
 
         function verifyInstructor() {
             const enteredPin = document.getElementById('instructor-pin').value;
+            const customId = document.getElementById('custom-room-id').value.trim();
+
+            if (!customId) {
+                alert("Please create a Room Name so your student can find you.");
+                return;
+            }
+
+            const sanitizedId = customId.replace(/[^a-zA-Z0-9_-]/g, "");
+
             if (enteredPin === INSTRUCTOR_SECRET_PIN) {
-                initSession('instructor');
+                localStorage.setItem('premium_math_last_room', sanitizedId);
+                initSession('instructor', sanitizedId);
             } else {
                 alert("Incorrect PIN. Only the authorized instructor can open a classroom.");
             }
         }
-
-        changePage(0, false);
 
         // Panning Logic
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
@@ -297,7 +336,6 @@
             if (currentTool === 'pan') canvas.classList.replace('cursor-grabbing', 'cursor-pan');
         });
 
-        // Draggable Windows
         function makeDraggable(elementId, handleId) {
             const el = document.getElementById(elementId);
             const handle = document.getElementById(handleId);
@@ -320,7 +358,6 @@
         makeDraggable('desmos-container', 'desmos-drag-handle');
         makeDraggable('screenshare-container', 'screenshare-drag-handle');
 
-        // Initialize Desmos
         const calcElement = document.getElementById('calculator');
         const calculator = Desmos.GraphingCalculator(calcElement, { expressions: true, settingsMenu: true });
         new ResizeObserver(() => { calculator.resize(); }).observe(document.getElementById('desmos-container'));
@@ -328,14 +365,19 @@
         let desmosSyncTimeout;
         calculator.observeEvent('change', () => {
             if (isReceivingDesmosState) return; 
+            
+            // Save instructor desmos state persistently
+            if (userRole === 'instructor') {
+                localStorage.setItem('premium_math_desmos', JSON.stringify(calculator.getState()));
+            }
+
             clearTimeout(desmosSyncTimeout);
             desmosSyncTimeout = setTimeout(() => {
                 broadcast({ type: 'desmos-state', state: calculator.getState() });
             }, 200);
         });
 
-        // WebRTC Initialization
-        function initSession(role) {
+        function initSession(role, roomId = null) {
             if (peer) return; 
             userRole = role;
             
@@ -349,29 +391,19 @@
                 config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
             };
 
-            // PERSISTENT INSTRUCTOR ID LOGIC
-            if (role === 'instructor') {
-                const savedRoomId = localStorage.getItem('premium_math_room_id');
-                if (savedRoomId) {
-                    peer = new Peer(savedRoomId, peerConfig);
-                } else {
-                    peer = new Peer(peerConfig);
-                }
+            if (role === 'instructor' && roomId) {
+                peer = new Peer(roomId, peerConfig);
             } else {
                 peer = new Peer(peerConfig);
             }
 
             peer.on('error', (err) => {
                 console.error("PeerJS Error:", err);
-                
-                // If saved ID is ghosted/locked by the server after a hard refresh, wipe and reset
                 if (err.type === 'unavailable-id' && role === 'instructor') {
-                    localStorage.removeItem('premium_math_room_id');
-                    alert("Securing a fresh Room ID. Please wait...");
+                    alert(`The Room Name "${roomId}" is currently taken. Please refresh and choose a unique name.`);
                     location.reload();
                     return;
                 }
-
                 const btn = document.getElementById('connect-btn');
                 if (btn) { btn.innerText = "Enter Classroom"; btn.style.pointerEvents = "auto"; }
             });
@@ -382,8 +414,33 @@
                 document.getElementById('btn-screen').style.display = 'inline-block';
                 
                 peer.on('open', (id) => { 
-                    localStorage.setItem('premium_math_room_id', id);
                     document.getElementById('my-id').innerText = id; 
+                    
+                    // Restore Board History on Load
+                    const savedHistory = localStorage.getItem('premium_math_history');
+                    if (savedHistory) {
+                        try {
+                            boardHistory = JSON.parse(savedHistory);
+                            replayHistory();
+                        } catch(e) {}
+                    }
+
+                    // Restore Page Location on Load
+                    const savedPage = localStorage.getItem('premium_math_page');
+                    if (savedPage) {
+                        currentPage = parseInt(savedPage) - 1;
+                        changePage(1, false);
+                    } else {
+                        changePage(0, false);
+                    }
+
+                    // Restore Desmos State on Load
+                    const savedDesmos = localStorage.getItem('premium_math_desmos');
+                    if (savedDesmos) {
+                        isReceivingDesmosState = true;
+                        calculator.setState(JSON.parse(savedDesmos));
+                        setTimeout(() => { isReceivingDesmosState = false; }, 100);
+                    }
                 });
                 
                 peer.on('call', (call) => {
@@ -420,33 +477,44 @@
         }
 
         function joinRoom() {
-            const id = document.getElementById('join-id').value.trim();
-            if (!id) return;
+            const customInstructorId = document.getElementById('join-id').value.trim();
+            if (!customInstructorId) return;
             
-            targetInstructorId = id; // Save for auto-reconnect
+            const sanitizedTargetId = customInstructorId.replace(/[^a-zA-Z0-9_-]/g, "");
+            targetInstructorId = sanitizedTargetId; 
             
+            if (!peer) initSession('student');
+
             const btn = document.getElementById('connect-btn');
             btn.innerText = "Connecting...";
             btn.style.pointerEvents = "none";
             
-            const conn = peer.connect(id);
-            setupDataConnection(conn);
-
-            if (localStream) {
-                currentCall = peer.call(id, localStream);
-                currentCall.on('stream', (remoteStream) => {
-                    document.getElementById('remote-video').srcObject = remoteStream;
-                    document.getElementById('remote-video').style.display = 'block';
-                });
+            if (peer.open) {
+                executeConnection(sanitizedTargetId);
+            } else {
+                peer.on('open', () => executeConnection(sanitizedTargetId));
             }
 
             setTimeout(() => {
                 if (document.getElementById('role-overlay').style.display !== 'none') {
                     btn.innerText = "Enter Classroom";
                     btn.style.pointerEvents = "auto";
-                    alert("Connection timed out. Please check the Room ID.");
+                    alert("Connection timed out. Please verify the Room Name.");
                 }
             }, 8000);
+        }
+
+        function executeConnection(targetId) {
+            const conn = peer.connect(targetId);
+            setupDataConnection(conn);
+
+            if (localStream) {
+                currentCall = peer.call(targetId, localStream);
+                currentCall.on('stream', (remoteStream) => {
+                    document.getElementById('remote-video').srcObject = remoteStream;
+                    document.getElementById('remote-video').style.display = 'block';
+                });
+            }
         }
 
         function setupDataConnection(conn) {
@@ -456,24 +524,46 @@
                 showToast("Connected to secure classroom!");
                 
                 if (userRole === 'instructor') {
+                    // Send entire board history instantly upon connection
+                    if (boardHistory.length > 0) {
+                        conn.send({ type: 'history-sync', history: boardHistory });
+                    }
+
                     const isDesmosOpen = document.getElementById('desmos-container').style.display === 'block';
                     if (isDesmosOpen) {
                         conn.send({ type: 'desmos-toggle', show: true });
                         conn.send({ type: 'desmos-state', state: calculator.getState() });
                     }
                     conn.send({ type: 'page', page: currentPage });
+                } else {
+                    // Student sets canvas size to start fresh before syncing
+                    changePage(0, false); 
                 }
             });
             
             conn.on('data', (data) => {
-                if (data.type === 'draw-batch') {
+                if (data.type === 'history-sync') {
+                    // Pre-load all content written before the student joined
+                    boardHistory = data.history;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    replayHistory();
+                } else if (data.type === 'draw-batch') {
                     data.lines.forEach(l => {
                         drawLine(l.x0, l.y0, l.x1, l.y1, l.color, l.width, l.tool, false);
+                        if (userRole === 'instructor') {
+                            boardHistory.push({ type: 'draw', ...l });
+                        }
                     });
+                    if (userRole === 'instructor') saveHistoryToStorage();
                 } else if (data.type === 'clear') {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    boardHistory = [];
                 } else if (data.type === 'image') {
-                    drawImageFromData(data.src, data.x, data.y);
+                    drawImageFromData(data.src, data.x, data.y, false);
+                    if (userRole === 'instructor') {
+                        boardHistory.push({ type: 'image', src: data.src, x: data.x, y: data.y });
+                        saveHistoryToStorage();
+                    }
                 } else if (data.type === 'page') {
                     currentPage = data.page - 1; 
                     changePage(1, false);
@@ -489,7 +579,6 @@
                 }
             });
 
-            // AUTO-RECONNECT LOGIC
             conn.on('close', () => {
                 if (userRole === 'student' && targetInstructorId) {
                     showToast("Instructor disconnected. Reconnecting automatically...");
@@ -502,10 +591,9 @@
                     btn.innerText = "Reconnecting...";
                     btn.style.pointerEvents = "none";
 
-                    // Actively hunt for the instructor's returning ID
                     setTimeout(() => {
                         document.getElementById('join-id').value = targetInstructorId;
-                        joinRoom();
+                        executeConnection(targetInstructorId);
                     }, 4000);
                 }
             });
@@ -596,24 +684,34 @@
                         const base64data = event.target.result;
                         const x = workspace.scrollLeft + (window.innerWidth / 2) - 200;
                         const y = workspace.scrollTop + (window.innerHeight / 2) - 200;
-                        drawImageFromData(base64data, x, y);
-                        broadcast({ type: 'image', src: base64data, x: x, y: y });
+                        drawImageFromData(base64data, x, y, true);
                     };
                     reader.readAsDataURL(blob);
                 }
             }
         });
 
-        function drawImageFromData(src, x, y) {
+        function drawImageFromData(src, x, y, emit = false) {
             const img = new Image();
             img.onload = function() { ctx.drawImage(img, x, y); };
             img.src = src;
+            
+            if (emit && userRole === 'instructor') {
+                boardHistory.push({ type: 'image', src: src, x: x, y: y });
+                saveHistoryToStorage();
+                broadcast({ type: 'image', src: src, x: x, y: y });
+            }
         }
 
+        // Master Purge Function
         function clearCanvas() {
             if (userRole === 'instructor') {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                broadcast({ type: 'clear' });
+                if (confirm("Are you sure you want to permanently purge all pages and clear the board history?")) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    boardHistory = [];
+                    localStorage.removeItem('premium_math_history');
+                    broadcast({ type: 'clear' });
+                }
             }
         }
 
@@ -686,11 +784,11 @@
         }
 
         function leaveClassroom() {
-            if (confirm("End the session?")) {
+            if (confirm("End the session? Your board history will be saved automatically.")) {
                 if (peer) peer.destroy();
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
                 if (screenStream) screenStream.getTracks().forEach(track => track.stop());
-                document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center;'><h1 style='color: #334155;'>Session Ended</h1></div>";
+                document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center;'><h1 style='color: #334155;'>Session Ended. Board state has been securely saved.</h1></div>";
             }
         }
 
