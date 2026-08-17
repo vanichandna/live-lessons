@@ -49,7 +49,7 @@
         
         /* 4-Way Scrollable Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
-        canvas { background: #ffffff; cursor: crosshair; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; touch-action: none; }
+        canvas { background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); display: block; touch-action: none; }
         
         /* Floating Panels */
         .draggable-panel { display: none; position: fixed; z-index: 100; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; background: white; resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
@@ -115,7 +115,7 @@
             <input type="color" id="color-picker" value="#0f172a" title="Marker Color">
             <input type="range" id="line-width" min="1" max="20" value="3" title="Line Thickness">
             <button onclick="recenterCanvas()" title="Return to center of board">🎯 Center</button>
-            <button onclick="clearCanvas()">🗑️ Clear</button>
+            <button id="btn-clear" onclick="clearCanvas()">🗑️ Clear</button>
             
             <div class="divider"></div>
             
@@ -179,16 +179,22 @@
         let screenStream = null;
         let screenCalls = [];
         let lastX, lastY;
+        let isReceivingDesmosState = false;
 
-        // Tool State Management
+        // Custom Tool Cursors for a Premium Feel
         function updateToolState() {
             const tool = toolSelect.value;
             if (tool === 'pan') {
                 workspace.style.overflow = 'auto';
                 canvas.style.cursor = 'grab';
+            } else if (tool === 'eraser') {
+                workspace.style.overflow = 'hidden'; 
+                // SVG Eraser Cursor
+                canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 24 24' fill='%23f1f5f9' stroke='%23475569' stroke-width='2'%3E%3Crect x='4' y='4' width='16' height='16' rx='4' ry='4'%3E%3C/rect%3E%3Cline x1='4' y1='12' x2='20' y2='12'%3E%3C/line%3E%3C/svg%3E") 15 15, crosshair`;
             } else {
                 workspace.style.overflow = 'hidden'; 
-                canvas.style.cursor = 'crosshair';
+                // SVG Pen Cursor (Point positioned perfectly at 2x 22y)
+                canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair`;
             }
         }
         updateToolState();
@@ -267,12 +273,12 @@
 
         let desmosSyncTimeout;
         calculator.observeEvent('change', () => {
-            if (userRole === 'instructor') {
-                clearTimeout(desmosSyncTimeout);
-                desmosSyncTimeout = setTimeout(() => {
-                    broadcast({ type: 'desmos-state', state: calculator.getState() });
-                }, 200);
-            }
+            if (isReceivingDesmosState) return; 
+            
+            clearTimeout(desmosSyncTimeout);
+            desmosSyncTimeout = setTimeout(() => {
+                broadcast({ type: 'desmos-state', state: calculator.getState() });
+            }, 200);
         });
 
         // WebRTC Initialization
@@ -337,6 +343,7 @@
             } else {
                 document.getElementById('role-selection').style.display = 'none';
                 document.getElementById('student-entry').style.display = 'flex';
+                document.getElementById('btn-clear').style.display = 'none';
                 
                 peer.on('call', (call) => {
                     if (call.metadata && call.metadata.type === 'screenshare') {
@@ -407,7 +414,9 @@
                     document.getElementById('desmos-container').style.display = data.show ? 'block' : 'none';
                     if (data.show) calculator.resize();
                 } else if (data.type === 'desmos-state') {
+                    isReceivingDesmosState = true;
                     calculator.setState(data.state);
+                    setTimeout(() => { isReceivingDesmosState = false; }, 100);
                 }
             });
         }
@@ -418,10 +427,8 @@
             });
         }
 
-        // --- UPGRADED: High-Performance Pointer Drawing Engine ---
         function getCoordinates(e) {
             const rect = canvas.getBoundingClientRect();
-            // Pointer events inherently handle touch, pen, and mouse natively through clientX/clientY
             return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
 
@@ -451,20 +458,17 @@
             if (tool === 'pan' || e.button === 1 || e.shiftKey) return; 
             
             isDrawing = true; 
-            // Lock pointer to canvas for perfectly smooth edge tracking
             canvas.setPointerCapture(e.pointerId);
             
             const coords = getCoordinates(e); 
             lastX = coords.x; lastY = coords.y; 
             
-            // Add tiny offset (+0.1) so a perfect dot renders instantly on touch without needing to drag
             drawLine(lastX, lastY, coords.x + 0.1, coords.y + 0.1, document.getElementById('color-picker').value, document.getElementById('line-width').value, tool, true);
         });
         
         canvas.addEventListener('pointermove', (e) => {
             if (!isDrawing) return;
             
-            // Collect extremely high-frequency intermediate pen strokes for buttery smooth curves
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
             
             for (let ev of events) {
@@ -481,7 +485,6 @@
         
         canvas.addEventListener('pointercancel', () => isDrawing = false);
 
-        // Images
         window.addEventListener('paste', function(e) {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (let i = 0; i < items.length; i++) {
@@ -507,11 +510,12 @@
         }
 
         function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            broadcast({ type: 'clear' });
+            if (userRole === 'instructor') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                broadcast({ type: 'clear' });
+            }
         }
 
-        // Tools
         function toggleMute() {
             if (!localStream) return;
             const audioTrack = localStream.getAudioTracks()[0];
@@ -574,11 +578,9 @@
             
             if (isShowing) calculator.resize();
             
-            if (userRole === 'instructor') {
-                broadcast({ type: 'desmos-toggle', show: isShowing });
-                if (isShowing) {
-                    broadcast({ type: 'desmos-state', state: calculator.getState() });
-                }
+            broadcast({ type: 'desmos-toggle', show: isShowing });
+            if (isShowing) {
+                broadcast({ type: 'desmos-state', state: calculator.getState() });
             }
         }
 
