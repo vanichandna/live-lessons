@@ -194,11 +194,9 @@
 
         // Core Setup - Highly optimized canvas size to prevent memory lag
         const canvas = document.getElementById('whiteboard');
-        // Hardware accelerated zero-latency context
         const ctx = canvas.getContext('2d', { desynchronized: true, willReadFrequently: false });
         const workspace = document.getElementById('workspace');
         
-        // 8000px gives plenty of infinite feel without overloading GPU rendering limits
         const CANVAS_SIZE = 8000;
         const PAGE_OFFSET = 2000; 
         canvas.width = CANVAS_SIZE;
@@ -213,14 +211,17 @@
         let lastX, lastY;
         let isReceivingDesmosState = false;
 
-        // NETWORK BATCHING ENGINE - Completely eliminates writing lag
+        // TARGET INSTRUCTOR ID FOR AUTO-RECONNECT
+        let targetInstructorId = null;
+
+        // NETWORK BATCHING ENGINE 
         let drawBatch = [];
         setInterval(() => {
             if (drawBatch.length > 0) {
                 broadcast({ type: 'draw-batch', lines: drawBatch });
                 drawBatch = [];
             }
-        }, 40); // Send data in bursts to avoid clogging the UI thread
+        }, 40); 
 
         // Tool & State Management
         let currentTool = 'pen';
@@ -344,14 +345,35 @@
                     document.getElementById('local-video').srcObject = stream;
                 }).catch(err => { console.log("Camera access bypassed/denied."); });
 
-            peer = new Peer({
+            const peerConfig = {
                 config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
-            });
+            };
+
+            // PERSISTENT INSTRUCTOR ID LOGIC
+            if (role === 'instructor') {
+                const savedRoomId = localStorage.getItem('premium_math_room_id');
+                if (savedRoomId) {
+                    peer = new Peer(savedRoomId, peerConfig);
+                } else {
+                    peer = new Peer(peerConfig);
+                }
+            } else {
+                peer = new Peer(peerConfig);
+            }
 
             peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+                
+                // If saved ID is ghosted/locked by the server after a hard refresh, wipe and reset
+                if (err.type === 'unavailable-id' && role === 'instructor') {
+                    localStorage.removeItem('premium_math_room_id');
+                    alert("Securing a fresh Room ID. Please wait...");
+                    location.reload();
+                    return;
+                }
+
                 const btn = document.getElementById('connect-btn');
                 if (btn) { btn.innerText = "Enter Classroom"; btn.style.pointerEvents = "auto"; }
-                alert("Connection Error: " + err.type + "\nPlease verify the ID is correct.");
             });
 
             if (role === 'instructor') {
@@ -359,7 +381,10 @@
                 document.getElementById('instructor-tools').style.display = 'flex';
                 document.getElementById('btn-screen').style.display = 'inline-block';
                 
-                peer.on('open', (id) => { document.getElementById('my-id').innerText = id; });
+                peer.on('open', (id) => { 
+                    localStorage.setItem('premium_math_room_id', id);
+                    document.getElementById('my-id').innerText = id; 
+                });
                 
                 peer.on('call', (call) => {
                     currentCall = call;
@@ -397,6 +422,8 @@
         function joinRoom() {
             const id = document.getElementById('join-id').value.trim();
             if (!id) return;
+            
+            targetInstructorId = id; // Save for auto-reconnect
             
             const btn = document.getElementById('connect-btn');
             btn.innerText = "Connecting...";
@@ -440,7 +467,6 @@
             
             conn.on('data', (data) => {
                 if (data.type === 'draw-batch') {
-                    // Receive remote network strokes instantly
                     data.lines.forEach(l => {
                         drawLine(l.x0, l.y0, l.x1, l.y1, l.color, l.width, l.tool, false);
                     });
@@ -460,6 +486,27 @@
                     isReceivingDesmosState = true;
                     calculator.setState(data.state);
                     setTimeout(() => { isReceivingDesmosState = false; }, 100);
+                }
+            });
+
+            // AUTO-RECONNECT LOGIC
+            conn.on('close', () => {
+                if (userRole === 'student' && targetInstructorId) {
+                    showToast("Instructor disconnected. Reconnecting automatically...");
+                    
+                    document.getElementById('role-overlay').style.display = 'flex';
+                    document.getElementById('role-selection').style.display = 'none';
+                    document.getElementById('student-entry').style.display = 'flex';
+                    
+                    const btn = document.getElementById('connect-btn');
+                    btn.innerText = "Reconnecting...";
+                    btn.style.pointerEvents = "none";
+
+                    // Actively hunt for the instructor's returning ID
+                    setTimeout(() => {
+                        document.getElementById('join-id').value = targetInstructorId;
+                        joinRoom();
+                    }, 4000);
                 }
             });
         }
@@ -505,7 +552,6 @@
             ctx.globalAlpha = 1.0;
 
             if (emit) {
-                // Queue for network instead of blocking thread
                 drawBatch.push({ x0, y0, x1, y1, color, width, tool });
             }
         }
