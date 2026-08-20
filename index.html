@@ -302,7 +302,6 @@
             document.getElementById('role-selection').style.display = 'flex';
         }
 
-        // UPGRADED: Async function to ensure camera loads before connecting
         async function verifyInstructor() {
             const enteredPin = document.getElementById('instructor-pin').value;
             const customId = document.getElementById('custom-room-id').value.trim();
@@ -323,7 +322,9 @@
             }
         }
 
+        // SYNCHRONIZED PANNING LOGIC
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
+        let panSyncTimeout;
         
         workspace.addEventListener('pointerdown', (e) => {
             if (currentTool === 'pan' || e.button === 1 || e.shiftKey) { 
@@ -333,11 +334,19 @@
                 e.preventDefault();
             }
         });
-        window.addEventListener('pointermove', (e) => {
+        
+        workspace.addEventListener('pointermove', (e) => {
             if (!isPanning) return;
             workspace.scrollLeft = startScrollLeft - (e.clientX - startPanX);
             workspace.scrollTop = startScrollTop - (e.clientY - startPanY);
+            
+            // Broadcast the new viewport coordinates seamlessly to the peer
+            clearTimeout(panSyncTimeout);
+            panSyncTimeout = setTimeout(() => {
+                broadcast({ type: 'pan', scrollLeft: workspace.scrollLeft, scrollTop: workspace.scrollTop });
+            }, 20); // 20ms throttle to prevent overwhelming the network while maintaining smooth sync
         });
+        
         window.addEventListener('pointerup', () => { 
             isPanning = false; 
             if (currentTool === 'pan') canvas.classList.replace('cursor-grabbing', 'cursor-pan');
@@ -374,7 +383,6 @@
             desmosSyncTimeout = setTimeout(() => { broadcast({ type: 'desmos-state', state: calculator.getState() }); }, 200);
         });
 
-        // UPGRADED: Awaits the camera stream strictly before building the WebRTC connection
         async function initSession(role, roomId = null) {
             if (peer) return; 
             userRole = role;
@@ -451,7 +459,6 @@
             }
         }
 
-        // UPGRADED: Awaits the camera process for the student before initiating the call
         async function joinRoom() {
             const customInstructorId = document.getElementById('join-id').value.trim();
             if (!customInstructorId) return;
@@ -516,6 +523,10 @@
                         if (userRole === 'instructor') boardHistory.push({ type: 'draw', ...l });
                     });
                     if (userRole === 'instructor') saveHistoryToStorage();
+                } else if (data.type === 'pan') {
+                    // Instantly sync the remote pan viewport
+                    workspace.scrollLeft = data.scrollLeft;
+                    workspace.scrollTop = data.scrollTop;
                 } else if (data.type === 'clear') {
                     ctx.clearRect(0, 0, canvas.width, canvas.height); boardHistory = [];
                 } else if (data.type === 'image') {
