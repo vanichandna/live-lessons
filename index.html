@@ -1,753 +1,673 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Live Math Masterclass</title>
-    <!-- PeerJS for WebRTC -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- Desmos API -->
-    <script src="https://www.desmos.com/api/v1.8/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
-    <!-- Robust Font Loading -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <style>
-        /* Elite Base Styling */
-        * { box-sizing: border-box; }
-        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; background: #f4f4f5; overflow: hidden; }
-        
-        /* Premium Entry Gates */
-        #role-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 24px; }
-        .role-title { color: white; font-weight: 500; font-size: 32px; letter-spacing: -0.5px; margin-bottom: 10px; text-align: center; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        
-        .auth-box { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 20px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); text-align: center; width: 340px; border: 1px solid rgba(255,255,255,0.2); }
-        .auth-box input { padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; text-align: center; outline: none; background: #f8fafc; transition: all 0.2s; }
-        .auth-box input:focus { background: #ffffff; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
-        
-        .role-btn { padding: 16px 24px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .role-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15); }
-        .btn-instructor { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; width: 100%; }
-        .btn-student { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.3); margin-top: 10px; }
-        .btn-student:hover { background: rgba(255,255,255,0.1); border-color: white; }
-        .btn-text { background: transparent; color: #94a3b8; padding: 10px; box-shadow: none; }
-        .btn-text:hover { color: white; box-shadow: none; transform: none; }
-
-        /* Floating Glass Toolbars */
-        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); pointer-events: auto; }
-
-        /* Top Bar */
-        #top-bar { position: fixed; top: 24px; left: 24px; right: 24px; z-index: 110; pointer-events: none; display: flex; justify-content: space-between; align-items: flex-start; }
-        
-        .instructor-only { display: none; }
-        .instructor-tag { padding: 10px 18px; border-radius: 12px; color: #1e40af; font-weight: 600; display: flex; gap: 10px; align-items: center; }
-        #my-id { font-family: 'Courier New', monospace; font-size: 15px; color: #1e3a8a; user-select: all; background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 6px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); }
-        
-        #action-bar { padding: 8px; border-radius: 14px; display: flex; gap: 8px; }
-        #action-bar button { padding: 10px 16px; border: 1px solid transparent; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; cursor: pointer; background: transparent; font-weight: 500; color: #334155; transition: all 0.2s; }
-        #action-bar button:hover { background: rgba(0,0,0,0.05); }
-        .primary-btn { background: #2563eb !important; color: white !important; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); }
-        .primary-btn:hover { background: #1d4ed8 !important; transform: translateY(-1px); }
-        .danger-btn { background: #fee2e2 !important; color: #ef4444 !important; }
-        .danger-btn:hover { background: #fca5a5 !important; }
-
-        /* Side Toolbar */
-        #side-toolbar { position: fixed; top: 90px; left: 24px; transform: none; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 100; align-items: center; max-height: calc(100vh - 180px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
-        #side-toolbar::-webkit-scrollbar { display: none; }
-        
-        .tool-btn { width: 48px; height: 48px; border-radius: 12px; border: none; background: transparent; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; color: #64748b; }
-        .tool-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
-        .tool-btn.active { background: #eff6ff; color: #2563eb; box-shadow: inset 0 0 0 1.5px #bfdbfe; }
-        
-        .toolbar-divider { width: 36px; height: 1.5px; background: rgba(0,0,0,0.06); margin: 4px 0; }
-        
-        /* Color Swatches */
-        .color-grid { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 1px #cbd5e1; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .color-btn.active { transform: scale(1.25); box-shadow: 0 0 0 2px #2563eb; }
-        
-        input[type=range] { width: 100px; transform: rotate(-90deg); margin: 50px 0; cursor: pointer; accent-color: #2563eb; }
-
-        /* Pagination Footer */
-        #pagination-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); border-radius: 30px; padding: 8px 16px; display: flex; align-items: center; gap: 15px; z-index: 100; font-weight: 600; color: #334155; }
-        .page-btn { background: transparent; border: none; font-size: 18px; color: #64748b; cursor: pointer; border-radius: 50%; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
-        .page-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
-
-        /* Canvas Workspace */
-        #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
-        canvas { background: #ffffff; display: block; touch-action: none; }
-        
-        /* Enforced Cursors */
-        .cursor-pen { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
-        .cursor-highlighter { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
-        .cursor-eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23f1f5f9' stroke='%23475569' stroke-width='2'%3E%3Crect x='4' y='4' width='16' height='16' rx='4' ry='4'%3E%3C/rect%3E%3Cline x1='4' y1='12' x2='20' y2='12'%3E%3C/line%3E%3C/svg%3E") 12 12, crosshair !important; }
-        .cursor-pan { cursor: grab !important; }
-        .cursor-grabbing { cursor: grabbing !important; }
-
-        /* Floating App Panels */
-        .draggable-panel { display: none; position: fixed; z-index: 200; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.4); resize: both; overflow: hidden; min-width: 300px; min-height: 250px; }
-        .drag-handle { background: rgba(248, 250, 252, 0.9); backdrop-filter: blur(8px); color: #334155; padding: 12px 20px; font-size: 14px; cursor: move; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
-        
-        #desmos-container { top: 100px; right: 30px; width: 550px; height: 600px; }
-        #screenshare-container { top: 100px; left: 30px; width: 640px; height: 480px; }
-        #calculator { width: 100%; height: calc(100% - 45px); }
-        #screenshare-video { width: 100%; height: calc(100% - 45px); background: #000; object-fit: contain; }
-
-        /* Camera Panel */
-        #video-container { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 16px; align-items: flex-end; z-index: 150; pointer-events: none; }
-        video.cam-video { background: #0f172a; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); pointer-events: auto; object-fit: cover; border: 2px solid rgba(255,255,255,0.1); }
-        #local-video { width: 160px; height: 120px; }
-        #remote-video { width: 300px; height: 225px; display: none; border-color: #2563eb; }
-        
-        /* Alerts */
-        #toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 14px 28px; border-radius: 30px; font-size: 15px; font-weight: 500; display: none; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); }
-    </style>
-</head>
-<body>
-    <!-- Secure Entry Gate -->
-    <div id="role-overlay">
-        <h2 class="role-title">Live Mathematics Workspace</h2>
-        
-        <div id="role-selection" style="display:flex; flex-direction:column; gap:20px; align-items:center;">
-            <div class="auth-box">
-                <div style="color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Instructor Access</div>
-                <input type="password" id="instructor-pin" placeholder="Enter Secure PIN">
-                <input type="text" id="custom-room-id" placeholder="Create Room Name (e.g. VaniMath)">
-                <button class="role-btn btn-instructor" id="btn-open-classroom" onclick="verifyInstructor()">Open Classroom</button>
-            </div>
-            <button class="role-btn btn-student" onclick="showStudentEntry()">Join as Student</button>
-        </div>
-
-        <div id="student-entry" style="display:none; flex-direction:column; gap:20px; align-items:center;">
-            <div class="auth-box">
-                <div style="color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Student Access</div>
-                <input type="text" id="join-id" placeholder="Enter the Room Name">
-                <button class="role-btn btn-instructor" id="connect-btn" onclick="joinRoom()">Enter Classroom</button>
-            </div>
-            <button class="role-btn btn-text" onclick="backToRoles()">← Back</button>
-        </div>
-    </div>
-
-    <!-- Top Status & A/V Bar -->
-    <div id="top-bar">
-        <div id="instructor-tools" class="instructor-only">
-            <div class="instructor-tag glass-panel">
-                <span>Room:</span>
-                <span id="my-id">Loading...</span>
-            </div>
-        </div>
-        <div style="flex-grow: 1;"></div>
-        <div id="action-bar" class="glass-panel">
-            <button id="btn-mute" onclick="toggleMute()">🎙️ Mute</button>
-            <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
-            <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Screen</button>
-            <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
-            <button class="danger-btn" onclick="leaveClassroom()">End Session</button>
-        </div>
-    </div>
-
-    <!-- Premium Side Toolbar -->
-    <div id="side-toolbar" class="glass-panel">
-        <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
-        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
-        <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
-        <button class="tool-btn" id="tool-pan" onclick="selectTool('pan')" title="Pan Board">✋</button>
-        
-        <div class="toolbar-divider"></div>
-        
-        <div class="color-grid">
-            <div class="color-btn active" style="background: #0f172a;" onclick="selectColor('#0f172a', this)"></div>
-            <div class="color-btn" style="background: #2563eb;" onclick="selectColor('#2563eb', this)"></div>
-            <div class="color-btn" style="background: #ef4444;" onclick="selectColor('#ef4444', this)"></div>
-            <div class="color-btn" style="background: #16a34a;" onclick="selectColor('#16a34a', this)"></div>
-            <div class="color-btn" style="background: #f59e0b;" onclick="selectColor('#f59e0b', this)"></div>
-        </div>
-
-        <input type="range" id="line-width" min="1" max="20" value="3" title="Line Thickness">
-        
-        <div class="toolbar-divider"></div>
-        <button class="tool-btn" id="btn-clear" onclick="clearCanvas()" title="Purge Board History" style="color: #ef4444;">🗑️</button>
-    </div>
-
-    <!-- Pagination Footer -->
-    <div id="pagination-bar" class="glass-panel">
-        <button class="page-btn" id="btn-prev" onclick="changePage(-1)">◀</button>
-        <span id="page-indicator">Page 1</span>
-        <button class="page-btn" id="btn-next" onclick="changePage(1)">▶</button>
-    </div>
-    
-    <div id="workspace">
-        <canvas id="whiteboard" class="cursor-pen"></canvas>
-    </div>
-
-    <!-- Floating Panels -->
-    <div id="desmos-container" class="draggable-panel glass-panel">
-        <div id="desmos-drag-handle" class="drag-handle">
-            <span>Graphing Calculator</span>
-            <span style="cursor:pointer; color:#ef4444;" onclick="toggleDesmos()">✕</span>
-        </div>
-        <div id="calculator"></div>
-    </div>
-
-    <div id="screenshare-container" class="draggable-panel glass-panel">
-        <div id="screenshare-drag-handle" class="drag-handle">
-            <span>Shared Screen</span>
-            <span style="cursor:pointer; color:#ef4444;" onclick="stopScreenShare()">✕</span>
-        </div>
-        <video id="screenshare-video" autoplay playsinline></video>
-    </div>
-
-    <div id="video-container">
-        <video id="local-video" class="cam-video" autoplay muted playsinline></video>
-        <video id="remote-video" class="cam-video" autoplay playsinline></video>
-    </div>
-
-    <div id="toast">Message</div>
-
-    <script>
-        const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
-        let boardHistory = [];
-
-        window.onload = () => {
-            const savedRoom = localStorage.getItem('premium_math_last_room');
-            if (savedRoom) {
-                document.getElementById('custom-room-id').value = savedRoom;
-            }
-        };
-
-        const canvas = document.getElementById('whiteboard');
-        const ctx = canvas.getContext('2d', { desynchronized: true, willReadFrequently: false });
-        const workspace = document.getElementById('workspace');
-        
-        const CANVAS_SIZE = 8000;
-        const PAGE_OFFSET = 2000; 
-        canvas.width = CANVAS_SIZE;
-        canvas.height = CANVAS_SIZE;
-
-        let isDrawing = false;
-        let connections = [];
-        let connectedStudentIDs = [];
-        let peer, localStream, currentCall, userRole;
-        let screenStream = null;
-        let screenCalls = [];
-        let lastX, lastY;
-        let isReceivingDesmosState = false;
-        let targetInstructorId = null;
-
-        let drawBatch = [];
-        setInterval(() => {
-            if (drawBatch.length > 0) {
-                broadcast({ type: 'draw-batch', lines: drawBatch });
-                if (userRole === 'instructor') {
-                    drawBatch.forEach(l => boardHistory.push({ type: 'draw', ...l }));
-                    saveHistoryToStorage();
-                }
-                drawBatch = [];
-            }
-        }, 40); 
-
-        function saveHistoryToStorage() {
-            try { localStorage.setItem('premium_math_history', JSON.stringify(boardHistory)); } 
-            catch (e) { console.warn("Storage limit reached."); }
-        }
-
-        // UPGRADED: Chunked rendering engine to smoothly redraw the board without crashing the graphics context
-        function replayHistory() {
-            const chunkSize = 300; 
-            let i = 0;
-            
-            function drawNextChunk() {
-                const chunk = boardHistory.slice(i, i + chunkSize);
-                chunk.forEach(item => {
-                    if (item.type === 'draw') { 
-                        drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false); 
-                    } else if (item.type === 'image') { 
-                        drawImageFromData(item.src, item.x, item.y, false); 
-                    }
-                });
-                
-                i += chunkSize;
-                if (i < boardHistory.length) {
-                    requestAnimationFrame(drawNextChunk);
-                }
-            }
-            
-            if (boardHistory.length > 0) {
-                requestAnimationFrame(drawNextChunk);
-            }
-        }
-
-        let currentTool = 'pen';
-        let currentColor = '#0f172a';
-        let currentPage = 1;
-
-        function selectTool(tool) {
-            currentTool = tool;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('tool-' + tool).classList.add('active');
-            canvas.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing');
-            canvas.classList.add('cursor-' + tool);
-            workspace.style.overflow = tool === 'pan' ? 'auto' : 'hidden';
-        }
-
-        function selectColor(color, btnElement) {
-            currentColor = color;
-            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
-            if (currentTool === 'eraser' || currentTool === 'pan') selectTool('pen');
-        }
-
-        function changePage(dir, emit = true) {
-            currentPage += dir;
-            if (currentPage < 1) currentPage = 1;
-            document.getElementById('page-indicator').innerText = `Page ${currentPage}`;
-            const targetX = (CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET) - (window.innerWidth / 2);
-            workspace.scrollLeft = targetX;
-            workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
-            if (emit && userRole === 'instructor') {
-                broadcast({ type: 'page', page: currentPage });
-                localStorage.setItem('premium_math_page', currentPage);
-            }
-        }
-
-        function showStudentEntry() {
-            document.getElementById('role-selection').style.display = 'none';
-            document.getElementById('student-entry').style.display = 'flex';
-        }
-
-        function backToRoles() {
-            document.getElementById('student-entry').style.display = 'none';
-            document.getElementById('role-selection').style.display = 'flex';
-        }
-
-        async function verifyInstructor() {
-            const enteredPin = document.getElementById('instructor-pin').value;
-            const customId = document.getElementById('custom-room-id').value.trim();
-            if (!customId) { alert("Please create a Room Name so your student can find you."); return; }
-            const sanitizedId = customId.replace(/[^a-zA-Z0-9_-]/g, "");
-
-            if (enteredPin === INSTRUCTOR_SECRET_PIN) {
-                const btn = document.getElementById('btn-open-classroom');
-                const originalText = btn.innerText;
-                btn.innerText = "Starting Camera...";
-                
-                localStorage.setItem('premium_math_last_room', sanitizedId);
-                await initSession('instructor', sanitizedId);
-                
-                btn.innerText = originalText;
-            } else {
-                alert("Incorrect PIN. Only the authorized instructor can open a classroom.");
-            }
-        }
-
-        let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
-        let panSyncTimeout;
-        
-        workspace.addEventListener('pointerdown', (e) => {
-            if (currentTool === 'pan' || e.button === 1 || e.shiftKey) { 
-                isPanning = true; startPanX = e.clientX; startPanY = e.clientY;
-                startScrollLeft = workspace.scrollLeft; startScrollTop = workspace.scrollTop;
-                if (currentTool === 'pan') canvas.classList.replace('cursor-pan', 'cursor-grabbing');
-                e.preventDefault();
-            }
-        });
-        
-        workspace.addEventListener('pointermove', (e) => {
-            if (!isPanning) return;
-            workspace.scrollLeft = startScrollLeft - (e.clientX - startPanX);
-            workspace.scrollTop = startScrollTop - (e.clientY - startPanY);
-            
-            clearTimeout(panSyncTimeout);
-            panSyncTimeout = setTimeout(() => {
-                broadcast({ type: 'pan', scrollLeft: workspace.scrollLeft, scrollTop: workspace.scrollTop });
-            }, 20); 
-        });
-        
-        window.addEventListener('pointerup', () => { 
-            isPanning = false; 
-            if (currentTool === 'pan') canvas.classList.replace('cursor-grabbing', 'cursor-pan');
-        });
-
-        function makeDraggable(elementId, handleId) {
-            const el = document.getElementById(elementId);
-            const handle = document.getElementById(handleId);
-            let isDraggingWin = false, startX, startY;
-
-            handle.addEventListener('mousedown', (e) => {
-                isDraggingWin = true; startX = e.clientX - el.offsetLeft; startY = e.clientY - el.offsetTop;
-                document.querySelectorAll('.draggable-panel').forEach(p => p.style.zIndex = 200);
-                el.style.zIndex = 201;
-            });
-            document.addEventListener('mousemove', (e) => {
-                if (!isDraggingWin) return;
-                el.style.left = (e.clientX - startX) + 'px'; el.style.top = (e.clientY - startY) + 'px';
-            });
-            document.addEventListener('mouseup', () => { isDraggingWin = false; });
-        }
-        makeDraggable('desmos-container', 'desmos-drag-handle');
-        makeDraggable('screenshare-container', 'screenshare-drag-handle');
-
-        const calcElement = document.getElementById('calculator');
-        const calculator = Desmos.GraphingCalculator(calcElement, { expressions: true, settingsMenu: true });
-        new ResizeObserver(() => { calculator.resize(); }).observe(document.getElementById('desmos-container'));
-
-        let desmosSyncTimeout;
-        calculator.observeEvent('change', () => {
-            if (isReceivingDesmosState) return; 
-            if (userRole === 'instructor') localStorage.setItem('premium_math_desmos', JSON.stringify(calculator.getState()));
-            clearTimeout(desmosSyncTimeout);
-            desmosSyncTimeout = setTimeout(() => { broadcast({ type: 'desmos-state', state: calculator.getState() }); }, 200);
-        });
-
-        async function initSession(role, roomId = null) {
-            if (peer) return; 
-            userRole = role;
-            
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('local-video').srcObject = localStream;
-            } catch(err) {
-                console.log("Camera access bypassed/denied by user.");
-            }
-
-            const peerConfig = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
-
-            if (role === 'instructor' && roomId) peer = new Peer(roomId, peerConfig);
-            else peer = new Peer(peerConfig);
-
-            peer.on('error', (err) => {
-                if (err.type === 'unavailable-id' && role === 'instructor') {
-                    alert(`The Room Name "${roomId}" is currently taken. Please refresh and choose a unique name.`);
-                    location.reload(); return;
-                }
-                const btn = document.getElementById('connect-btn');
-                if (btn) { btn.innerText = "Enter Classroom"; btn.style.pointerEvents = "auto"; }
-            });
-
-            if (role === 'instructor') {
-                document.getElementById('role-overlay').style.display = 'none';
-                document.getElementById('instructor-tools').style.display = 'flex';
-                document.getElementById('btn-screen').style.display = 'inline-block';
-                
-                peer.on('open', (id) => { 
-                    document.getElementById('my-id').innerText = id; 
-                    
-                    const savedHistory = localStorage.getItem('premium_math_history');
-                    if (savedHistory) { 
-                        try { 
-                            boardHistory = JSON.parse(savedHistory); 
-                            ctx.clearRect(0, 0, canvas.width, canvas.height); 
-                            // Slight delay to ensure the canvas is fully mounted/rendered before bulk drawing
-                            setTimeout(() => { replayHistory(); }, 300);
-                        } catch(e) {} 
-                    }
-                    
-                    const savedPage = localStorage.getItem('premium_math_page');
-                    if (savedPage) { currentPage = parseInt(savedPage) - 1; changePage(1, false); } else { changePage(0, false); }
-                    
-                    const savedDesmos = localStorage.getItem('premium_math_desmos');
-                    if (savedDesmos) {
-                        isReceivingDesmosState = true;
-                        calculator.setState(JSON.parse(savedDesmos));
-                        setTimeout(() => { isReceivingDesmosState = false; }, 100);
-                    }
-                });
-                
-                peer.on('call', (call) => {
-                    currentCall = call;
-                    if (localStream) call.answer(localStream); else call.answer();
-                    call.on('stream', (remoteStream) => {
-                        document.getElementById('remote-video').srcObject = remoteStream;
-                        document.getElementById('remote-video').style.display = 'block';
-                    });
-                });
-                
-                peer.on('connection', (conn) => {
-                    setupDataConnection(conn);
-                    if (!connectedStudentIDs.includes(conn.peer)) connectedStudentIDs.push(conn.peer);
-                });
-            } else {
-                document.getElementById('role-selection').style.display = 'none';
-                document.getElementById('student-entry').style.display = 'flex';
-                document.getElementById('btn-clear').style.display = 'none';
-                document.getElementById('btn-prev').style.display = 'none';
-                document.getElementById('btn-next').style.display = 'none';
-                
-                peer.on('call', (call) => {
-                    if (call.metadata && call.metadata.type === 'screenshare') {
-                        call.answer(); 
-                        call.on('stream', (stream) => {
-                            document.getElementById('screenshare-video').srcObject = stream;
-                            document.getElementById('screenshare-container').style.display = 'block';
-                        });
-                    }
-                });
-            }
-        }
-
-        async function joinRoom() {
-            const customInstructorId = document.getElementById('join-id').value.trim();
-            if (!customInstructorId) return;
-            
-            const sanitizedTargetId = customInstructorId.replace(/[^a-zA-Z0-9_-]/g, "");
-            targetInstructorId = sanitizedTargetId; 
-            
-            const btn = document.getElementById('connect-btn');
-            btn.innerText = "Connecting..."; btn.style.pointerEvents = "none";
-            
-            if (!peer) {
-                await initSession('student');
-            }
-            
-            if (peer.open) executeConnection(sanitizedTargetId);
-            else peer.on('open', () => executeConnection(sanitizedTargetId));
-
-            setTimeout(() => {
-                if (document.getElementById('role-overlay').style.display !== 'none') {
-                    btn.innerText = "Enter Classroom"; btn.style.pointerEvents = "auto";
-                    alert("Connection timed out. Please verify the Room Name.");
-                }
-            }, 8000);
-        }
-
-        function executeConnection(targetId) {
-            const conn = peer.connect(targetId);
-            setupDataConnection(conn);
-            if (localStream) {
-                currentCall = peer.call(targetId, localStream);
-                currentCall.on('stream', (remoteStream) => {
-                    document.getElementById('remote-video').srcObject = remoteStream;
-                    document.getElementById('remote-video').style.display = 'block';
-                });
-            }
-        }
-
-        function setupDataConnection(conn) {
-            connections.push(conn);
-            conn.on('open', () => {
-                document.getElementById('role-overlay').style.display = 'none';
-                showToast("Connected to secure classroom!");
-                
-                if (userRole === 'instructor') {
-                    if (boardHistory.length > 0) conn.send({ type: 'history-sync', history: boardHistory });
-                    if (document.getElementById('desmos-container').style.display === 'block') {
-                        conn.send({ type: 'desmos-toggle', show: true });
-                        conn.send({ type: 'desmos-state', state: calculator.getState() });
-                    }
-                    conn.send({ type: 'page', page: currentPage });
-                } else {
-                    changePage(0, false); 
-                }
-            });
-            
-            conn.on('data', (data) => {
-                if (data.type === 'history-sync') {
-                    boardHistory = data.history; 
-                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
-                    // Let the student's browser cleanly redraw chunks
-                    replayHistory();
-                } else if (data.type === 'draw-batch') {
-                    data.lines.forEach(l => {
-                        drawLine(l.x0, l.y0, l.x1, l.y1, l.color, l.width, l.tool, false);
-                        if (userRole === 'instructor') boardHistory.push({ type: 'draw', ...l });
-                    });
-                    if (userRole === 'instructor') saveHistoryToStorage();
-                } else if (data.type === 'pan') {
-                    workspace.scrollLeft = data.scrollLeft;
-                    workspace.scrollTop = data.scrollTop;
-                } else if (data.type === 'clear') {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height); boardHistory = [];
-                } else if (data.type === 'image') {
-                    drawImageFromData(data.src, data.x, data.y, false);
-                    if (userRole === 'instructor') {
-                        boardHistory.push({ type: 'image', src: data.src, x: data.x, y: data.y });
-                        saveHistoryToStorage();
-                    }
-                } else if (data.type === 'page') {
-                    currentPage = data.page - 1; changePage(1, false);
-                } else if (data.type === 'stop-screenshare') {
-                    document.getElementById('screenshare-container').style.display = 'none';
-                } else if (data.type === 'desmos-toggle') {
-                    document.getElementById('desmos-container').style.display = data.show ? 'block' : 'none';
-                    if (data.show) calculator.resize();
-                } else if (data.type === 'desmos-state') {
-                    isReceivingDesmosState = true;
-                    calculator.setState(data.state);
-                    setTimeout(() => { isReceivingDesmosState = false; }, 100);
-                }
-            });
-
-            conn.on('close', () => {
-                if (userRole === 'student' && targetInstructorId) {
-                    showToast("Instructor disconnected. Reconnecting...");
-                    document.getElementById('role-overlay').style.display = 'flex';
-                    document.getElementById('role-selection').style.display = 'none';
-                    document.getElementById('student-entry').style.display = 'flex';
-                    
-                    const btn = document.getElementById('connect-btn');
-                    btn.innerText = "Reconnecting..."; btn.style.pointerEvents = "none";
-
-                    setTimeout(() => {
-                        document.getElementById('join-id').value = targetInstructorId;
-                        executeConnection(targetInstructorId);
-                    }, 4000);
-                }
-            });
-        }
-
-        function broadcast(data) {
-            connections.forEach(conn => { if (conn.open) conn.send(data); });
-        }
-
-        function getCoordinates(e) {
-            const rect = canvas.getBoundingClientRect();
-            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        }
-
-        function drawLine(x0, y0, x1, y1, color, width, tool, emit) {
-            ctx.beginPath();
-            ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
-            
-            if (tool === 'eraser') {
-                ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = width * 5; ctx.globalAlpha = 1.0;
-            } else if (tool === 'highlighter') {
-                ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = width * 4; ctx.globalAlpha = 0.3; 
-            } else {
-                ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = width; ctx.globalAlpha = 1.0;
-            }
-            
-            ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); ctx.closePath();
-            ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1.0;
-
-            if (emit) drawBatch.push({ x0, y0, x1, y1, color, width, tool });
-        }
-
-        canvas.addEventListener('pointerdown', (e) => { 
-            if (currentTool === 'pan' || e.button === 1 || e.shiftKey) return; 
-            isDrawing = true; canvas.setPointerCapture(e.pointerId);
-            const coords = getCoordinates(e); lastX = coords.x; lastY = coords.y; 
-            drawLine(lastX, lastY, coords.x + 0.1, coords.y + 0.1, currentColor, document.getElementById('line-width').value, currentTool, true);
-        });
-        
-        canvas.addEventListener('pointermove', (e) => {
-            if (!isDrawing) return;
-            const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-            for (let ev of events) {
-                const coords = getCoordinates(ev);
-                drawLine(lastX, lastY, coords.x, coords.y, currentColor, document.getElementById('line-width').value, currentTool, true);
-                lastX = coords.x; lastY = coords.y;
-            }
-        });
-        
-        canvas.addEventListener('pointerup', (e) => { isDrawing = false; canvas.releasePointerCapture(e.pointerId); });
-        canvas.addEventListener('pointercancel', () => isDrawing = false);
-
-        window.addEventListener('paste', function(e) {
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile(); const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const base64data = event.target.result;
-                        const x = workspace.scrollLeft + (window.innerWidth / 2) - 200;
-                        const y = workspace.scrollTop + (window.innerHeight / 2) - 200;
-                        drawImageFromData(base64data, x, y, true);
-                    };
-                    reader.readAsDataURL(blob);
-                }
-            }
-        });
-
-        function drawImageFromData(src, x, y, emit = false) {
-            const img = new Image();
-            img.onload = function() { ctx.drawImage(img, x, y); };
-            img.src = src;
-            if (emit && userRole === 'instructor') {
-                boardHistory.push({ type: 'image', src: src, x: x, y: y });
-                saveHistoryToStorage();
-                broadcast({ type: 'image', src: src, x: x, y: y });
-            }
-        }
-
-        function clearCanvas() {
-            if (userRole === 'instructor') {
-                if (confirm("Permanently purge all pages and clear board history?")) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    boardHistory = []; localStorage.removeItem('premium_math_history');
-                    broadcast({ type: 'clear' });
-                }
-            }
-        }
-
-        function toggleMute() {
-            if (!localStream) return;
-            const audioTrack = localStream.getAudioTracks()[0];
-            audioTrack.enabled = !audioTrack.enabled;
-            const btn = document.getElementById('btn-mute');
-            btn.innerText = audioTrack.enabled ? "🎙️ Mute" : "🔇 Unmute";
-            btn.style.background = audioTrack.enabled ? "" : "#fee2e2";
-        }
-
-        function toggleVideo() {
-            if (!localStream) return;
-            const videoTrack = localStream.getVideoTracks()[0];
-            videoTrack.enabled = !videoTrack.enabled;
-            const btn = document.getElementById('btn-video');
-            btn.innerText = videoTrack.enabled ? "📹 Cam On" : "📸 Cam Off";
-            btn.style.background = videoTrack.enabled ? "" : "#fee2e2";
-        }
-
-        async function toggleScreenShare() {
-            if (screenStream) { stopScreenShare(); return; }
-            try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-                document.getElementById('screenshare-video').srcObject = screenStream;
-                document.getElementById('screenshare-container').style.display = 'block';
-                document.getElementById('btn-screen').innerText = "📺 Stop Share";
-
-                connectedStudentIDs.forEach(studentId => {
-                    const screenCall = peer.call(studentId, screenStream, { metadata: { type: 'screenshare' } });
-                    screenCalls.push(screenCall);
-                });
-
-                screenStream.getVideoTracks()[0].onended = () => { stopScreenShare(); };
-                showToast("Screen sharing started.");
-            } catch (e) { console.error("Screen share error", e); }
-        }
-
-        function stopScreenShare() {
-            if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
-            screenCalls.forEach(call => call.close()); screenCalls = [];
-            document.getElementById('screenshare-container').style.display = 'none';
-            document.getElementById('btn-screen').innerText = "📺 Share Screen";
-            broadcast({ type: 'stop-screenshare' });
-            showToast("Screen sharing stopped.");
-        }
-
-        function toggleDesmos() {
-            const panel = document.getElementById('desmos-container');
-            const isShowing = panel.style.display !== 'block';
-            panel.style.display = isShowing ? 'block' : 'none';
-            if (isShowing) calculator.resize();
-            broadcast({ type: 'desmos-toggle', show: isShowing });
-            if (isShowing) broadcast({ type: 'desmos-state', state: calculator.getState() });
-        }
-
-        function leaveClassroom() {
-            if (confirm("End the session? Your board history will be saved automatically.")) {
-                if (peer) peer.destroy();
-                if (localStream) localStream.getTracks().forEach(track => track.stop());
-                if (screenStream) screenStream.getTracks().forEach(track => track.stop());
-                document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center;'><h1 style='color: #334155;'>Session Ended. Board state securely saved.</h1></div>";
-            }
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg; toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 3000);
-        }
-    </script>
-</body>
-</html>
+"use client";
+
+import React, { useState, useRef, useEffect, Suspense, useMemo } from "react";
+import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { useSearchParams, useRouter } from "next/navigation";
+import { api } from '@/utils/api';
+
+import ChatSidebar, { InboxContact, SearchMessage } from "@/components/chat/ChatSidebar";
+import ChatArea from "@/components/chat/ChatArea";
+import { ChatMessage } from "@/components/chat/MessageBubble"; // 🚨 THE FIX: Imported from the correct file!
+import TrialBookingModal from '@/components/TrialBookingModal';
+import BuyHoursModal from '@/components/dashboard/student/BuyHoursModal';
+import RegularBookingModal from '@/components/dashboard/student/RegularBookingModal';
+
+const cleanMessageForPreview = (text: string) => {
+    if (!text) return "";
+    const matchV2 = text.match(/^\[REPLY::(.*?)::(.*?)::(.*?)\]\n\n([\s\S]*)$/);
+    if (matchV2) return matchV2[4];
+    const matchV1 = text.match(/^\[REPLY::(.*?)::(.*?)\]\n\n([\s\S]*)$/);
+    return matchV1 ? matchV1[3] : text;
+};
+
+function MessagesInboxContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetUserId = searchParams.get("to");
+
+  const [inbox, setInbox] = useState<InboxContact[]>([]);
+  const [allBookings, setAllBookings] = useState<any[]>([]);
+  const [ledger, setLedger] = useState<any[]>([]);
+  const [activeChat, setActiveChat] = useState<InboxContact | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
+  const [archivedIds, setArchivedIds] = useState<string[]>([]);
+  const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string, text: string, isSender: boolean } | null>(null);
+  
+  const template = `Hi ${activeChat?.name || 'there'},\n\nI am looking for help with:\n\nSubject: __________\nCurrent grade/level: __________\n\nMy goal:\n[ ] Exam preparation\n[ ] Improving concepts\n[ ] Homework support\n[ ] Regular classes\n\nTopics I need help with: __________\n\nPreferred schedule: __________\n\nAnything else: __________\n\nThanks!`;
+
+  const [sessionUnreadCount, setSessionUnreadCount] = useState(0);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Record<string, NodeJS.Timeout>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false); 
+  const [connection, setConnection] = useState<HubConnection | null>(null);
+  
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const activeChatRef = useRef<InboxContact | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); 
+  const unreadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+      try {
+          const stored = localStorage.getItem("tixtra_archived_chats");
+          if (stored) setArchivedIds(JSON.parse(stored));
+      } catch (e) {
+          console.error("Failed to parse archived chats");
+      }
+  }, []);
+
+  const toggleArchive = (id: string) => {
+      setArchivedIds(prev => {
+          const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+          localStorage.setItem("tixtra_archived_chats", JSON.stringify(next));
+          return next;
+      });
+  };
+
+  useEffect(() => {
+      activeChatRef.current = activeChat;
+  }, [activeChat]);
+
+  const canShareFiles = useMemo(() => {
+      if (!activeChat || !allBookings.length) return false;
+      return allBookings.some((b: any) => 
+          b.otherPartyEmail.split('@')[0].toLowerCase() === activeChat.name.toLowerCase() ||
+          b.otherPartyName.toLowerCase() === activeChat.name.toLowerCase()
+      );
+  }, [activeChat, allBookings]);
+
+  const dismissUnreadSmoothly = () => {
+      setIsFadingOut(true);
+      setTimeout(() => {
+          setSessionUnreadCount(0);
+          setIsFadingOut(false);
+      }, 500); 
+  };
+
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+      const token = localStorage.getItem("tixtra_token");
+      const roleStr = localStorage.getItem("tixtra_role");
+      setUserRole(roleStr);
+
+      if (!token) {
+          router.push("/login");
+          return;
+      }
+
+      const fetchData = async () => {
+          try {
+              const promises: Promise<Response>[] = [
+                  api.get("/chat/inbox"),
+                  api.get("/bookings")
+              ];
+
+              if (roleStr === "Student" || roleStr === "0") {
+                  promises.push(api.get("/studentdashboard/ledger"));
+              }
+
+              const results = await Promise.all(promises);
+              const inboxRes = results[0];
+              const bookingsRes = results[1];
+              const ledgerRes = results.length > 2 ? results[2] : null; 
+              
+              if (bookingsRes.ok) {
+                  setAllBookings(await bookingsRes.json());
+              }
+
+              if (ledgerRes && ledgerRes.ok) {
+                  setLedger(await ledgerRes.json());
+              }
+
+              if (inboxRes.ok) {
+                  const data = await inboxRes.json();
+                  
+                  let updatedInbox = data.map((c: any) => ({
+                      ...c,
+                      lastMessage: cleanMessageForPreview(c.lastMessage),
+                      allMessages: c.allMessages?.map((m: any) => ({ ...m, text: cleanMessageForPreview(m.text) }))
+                  }));
+
+                  if (targetUserId && !updatedInbox.some((c: any) => c.id === targetUserId)) {
+                      try {
+                          const userRes = await api.get(`/tutors/${targetUserId}`);
+                          let userData = null;
+                          if (userRes.ok) {
+                              userData = await userRes.json();
+                          } else {
+                              const allTutorsRes = await api.get('/tutors');
+                              if (allTutorsRes.ok) {
+                                  const allTutors = await allTutorsRes.json();
+                                  userData = allTutors.find((t: any) => t.userId === targetUserId);
+                              }
+                          }
+                          if (userData) {
+                              const newContact = {
+                                  id: userData.userId,
+                                  name: userData.firstName || "Instructor",
+                                  role: "TUTOR",
+                                  hourlyRate: userData.hourlyRate || 0,
+                                  photoUrl: userData.photoUrl || userData.profilePhotoUrl,
+                                  lastMessage: "Start a new conversation...",
+                                  time: "Now",
+                                  unread: 0,
+                                  allMessages: []
+                              };
+                              updatedInbox = [newContact, ...updatedInbox];
+                          }
+                      } catch (e) {
+                          console.error("Could not fetch target user.");
+                      }
+                  }
+
+                  setInbox(updatedInbox);
+
+                  const storedArchived = JSON.parse(localStorage.getItem("tixtra_archived_chats") || "[]");
+
+                  if (targetUserId) {
+                      const target = updatedInbox.find((c: any) => c.id === targetUserId);
+                      if (target) handleSelectChat(target);
+                  } else if (updatedInbox.length > 0) {
+                      const firstActive = updatedInbox.find((c: any) => !storedArchived.includes(c.id));
+                      if (firstActive) handleSelectChat(firstActive);
+                  }
+              }
+          } catch (e) {
+              console.error("Failed to load messages.", e);
+          } finally {
+              setIsLoading(false);
+          }
+      };
+
+      const setupSignalR = () => {
+          const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+          const newConn = new HubConnectionBuilder()
+              .withUrl(`http://${host}:5254/chatHub`, { accessTokenFactory: () => token })
+              .withAutomaticReconnect()
+              .configureLogging(LogLevel.Warning)
+              .build();
+
+          newConn.start().catch(err => console.error("SignalR Connection Error:", err));
+          setConnection(newConn);
+      };
+
+      fetchData();
+      setupSignalR();
+
+      return () => { 
+          if (unreadTimeoutRef.current) clearTimeout(unreadTimeoutRef.current);
+          connection?.stop(); 
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetUserId]);
+
+  const handleSelectChat = async (contact: InboxContact) => {
+      setActiveChat(contact);
+      setMessages([]); 
+      setSearchQuery(""); 
+      setOpenMessageMenuId(null);
+      setReplyingTo(null);
+      
+      if (unreadTimeoutRef.current) clearTimeout(unreadTimeoutRef.current);
+      setIsFadingOut(false);
+      setSessionUnreadCount(contact.unread);
+      
+      try {
+          const res = await api.get(`/chat/history/${contact.id}`);
+          if (res.ok) {
+              const data = await res.json();
+              setMessages(data);
+
+              setTimeout(() => {
+                  setInbox(prev => prev.map(c => c.id === contact.id ? { ...c, unread: 0 } : c));
+                  window.dispatchEvent(new Event("chatReadSync"));
+              }, 3000);
+
+              unreadTimeoutRef.current = setTimeout(() => {
+                  dismissUnreadSmoothly();
+              }, 6000);
+          }
+      } catch (e) {
+          console.error("Failed to load history.");
+      }
+  };
+
+  useEffect(() => {
+      if (!connection) return;
+
+      const handleReceive = (msg: ChatMessage) => {
+          setArchivedIds(prev => {
+              if (prev.includes(msg.senderId!)) {
+                  const next = prev.filter(id => id !== msg.senderId);
+                  localStorage.setItem("tixtra_archived_chats", JSON.stringify(next));
+                  return next;
+              }
+              return prev;
+          });
+
+          if (activeChatRef.current?.id === msg.senderId) {
+              setMessages(prev => [...prev, msg]);
+              
+              connection.invoke("MarkMessagesAsRead", msg.senderId, [msg.id]).catch(console.error);
+
+              setTypingUsers(prev => {
+                  const newTyping = { ...prev };
+                  if (newTyping[msg.senderId!]) clearTimeout(newTyping[msg.senderId!]);
+                  delete newTyping[msg.senderId!];
+                  return newTyping;
+              });
+
+              api.get(`/chat/history/${msg.senderId}`).then(() => {
+                  window.dispatchEvent(new Event("chatReadSync"));
+              });
+          }
+
+          setInbox(prev => {
+              const existing = prev.find(c => c.id === msg.senderId);
+              if (!existing) return prev; 
+              
+              const newSearchMsg = {
+                  id: msg.id,
+                  text: cleanMessageForPreview(msg.fileName ? `📎 ${msg.fileName}` : msg.text),
+                  time: msg.time
+              };
+
+              const updatedContact = { 
+                  ...existing, 
+                  lastMessage: newSearchMsg.text, 
+                  time: msg.time, 
+                  unread: activeChatRef.current?.id === msg.senderId ? 0 : existing.unread + 1,
+                  allMessages: [newSearchMsg, ...(existing.allMessages || [])]
+              };
+              
+              return [updatedContact, ...prev.filter(c => c.id !== msg.senderId)];
+          });
+      };
+
+      const handleSent = (msg: ChatMessage) => {
+          if (activeChatRef.current?.id === msg.receiverId) {
+              setMessages(prev => [...prev, msg]);
+          }
+          
+          setInbox(prev => {
+              const existing = prev.find(c => c.id === msg.receiverId);
+              if (!existing) return prev;
+
+              const newSearchMsg = {
+                  id: msg.id,
+                  text: cleanMessageForPreview(msg.fileName ? `📎 ${msg.fileName}` : msg.text),
+                  time: msg.time
+              };
+
+              const updatedContact = { 
+                  ...existing, 
+                  lastMessage: newSearchMsg.text, 
+                  time: msg.time,
+                  allMessages: [newSearchMsg, ...(existing.allMessages || [])]
+              };
+              return [updatedContact, ...prev.filter(c => c.id !== msg.receiverId)];
+          });
+      };
+
+      const handleSystemWarning = (msg: any) => {
+          if (activeChatRef.current?.id === msg.receiverId || activeChatRef.current?.id === msg.senderId) {
+              setMessages(prev => [...prev, { ...msg, isSystem: true, isSender: false }]);
+              api.get(`/chat/history/${msg.senderId || msg.receiverId}`).then(() => {
+                  window.dispatchEvent(new Event("chatReadSync"));
+              });
+          }
+      };
+
+      const handleReadReceipt = (messageIds: string[], readerId: string) => {
+          if (activeChatRef.current?.id === readerId) {
+              setMessages(prev => prev.map(m => messageIds.includes(m.id) ? { ...m, isRead: true } : m));
+          }
+      };
+
+      const handleTyping = (senderId: string) => {
+          setTypingUsers(prev => {
+              const newTyping = { ...prev };
+              if (newTyping[senderId]) clearTimeout(newTyping[senderId]);
+              newTyping[senderId] = setTimeout(() => {
+                  setTypingUsers(current => {
+                      const updated = { ...current };
+                      delete updated[senderId];
+                      return updated;
+                  });
+              }, 3000);
+              return newTyping;
+          });
+      };
+
+      const handleDeleteEvent = (msgId: string) => {
+          setMessages(prev => prev.filter(m => m.id !== msgId));
+      };
+
+      connection.on("ReceiveMessage", handleReceive);
+      connection.on("MessageSent", handleSent);
+      connection.on("ReceiveSystemMessage", handleSystemWarning);
+      connection.on("UserIsTyping", handleTyping); 
+      connection.on("MessageDeleted", handleDeleteEvent);
+      connection.on("MessagesReadReceipt", handleReadReceipt); 
+
+      return () => {
+          connection.off("ReceiveMessage", handleReceive);
+          connection.off("MessageSent", handleSent);
+          connection.off("ReceiveSystemMessage", handleSystemWarning);
+          connection.off("UserIsTyping", handleTyping);
+          connection.off("MessageDeleted", handleDeleteEvent);
+          connection.off("MessagesReadReceipt", handleReadReceipt);
+      };
+  }, [connection]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setChatInput(e.target.value);
+      if (connection && activeChat && e.target.value.length > 0) {
+          connection.invoke("SendTypingIndicator", activeChat.id).catch(console.error); 
+      }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage();
+      }
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      if (!chatInput.trim() || !activeChat || !connection) return;
+
+      const currentInput = chatInput.trim();
+      const containsLink = /(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?/i.test(currentInput);
+      
+      if (containsLink && !canShareFiles) {
+          setMessages(prev => [...prev, {
+              id: Date.now().toString(),
+              text: "🛡️ Security Firewall: Link sharing is disabled until a trial lesson is officially booked and confirmed.",
+              isSystem: true,
+              isSender: false,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }]);
+          setChatInput("");
+          return;
+      }
+
+      let finalPayload = currentInput;
+      if (replyingTo) {
+          const senderName = replyingTo.isSender ? 'You' : activeChat.name;
+          const previewText = replyingTo.text.replace(/[\r\n\[\]]/g, ' ').substring(0, 80);
+          finalPayload = `[REPLY::${replyingTo.id}::${senderName}::${previewText}]\n\n${currentInput}`;
+      }
+
+      setChatInput(""); 
+      setReplyingTo(null);
+      
+      if (sessionUnreadCount > 0 && !isFadingOut) {
+          if (unreadTimeoutRef.current) clearTimeout(unreadTimeoutRef.current);
+          dismissUnreadSmoothly();
+      }
+
+      try {
+          await connection.invoke("SendMessage", activeChat.id, finalPayload);
+      } catch (err) {
+          console.error("Failed to send message", err);
+          setChatInput(currentInput); 
+      }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !activeChat) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+          alert("File is too large. Maximum size is 10MB.");
+          return;
+      }
+
+      if (sessionUnreadCount > 0 && !isFadingOut) {
+          if (unreadTimeoutRef.current) clearTimeout(unreadTimeoutRef.current);
+          dismissUnreadSmoothly();
+      }
+
+      setIsUploading(true);
+      const token = localStorage.getItem("tixtra_token");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+          const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+          const res = await fetch(`http://${host}:5254/api/chat/upload/${activeChat.id}`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${token}` },
+              body: formData
+          });
+
+          if (res.ok) {
+              const newMsg = await res.json();
+              setMessages(prev => [...prev, newMsg]);
+              setSessionUnreadCount(0); 
+              if (unreadTimeoutRef.current) clearTimeout(unreadTimeoutRef.current);
+          } else {
+              const rawErrorText = await res.text();
+              let safeErrorMessage = "Server Error: Unable to process file. Ensure it is a valid format (JPG, PNG, PDF) and under the 10MB limit.";
+              if (rawErrorText && !rawErrorText.trim().startsWith("<")) {
+                  try {
+                      const jsonErr = JSON.parse(rawErrorText);
+                      safeErrorMessage = jsonErr.message || jsonErr.error || safeErrorMessage;
+                  } catch {
+                      if (rawErrorText.length < 200 && !rawErrorText.includes("at ")) {
+                          safeErrorMessage = rawErrorText;
+                      }
+                  }
+              }
+              setMessages(prev => [...prev, { id: Date.now().toString(), text: `🛡️ Security Firewall: ${safeErrorMessage}`, isSystem: true, isSender: false, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+          }
+      } catch (err) {
+          setMessages(prev => [...prev, { id: Date.now().toString(), text: "🛡️ Security Firewall: Network Error. Please check your connection and try again.", isSystem: true, isSender: false, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      } finally {
+          setIsUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+      if (!connection || !activeChat) return;
+      try {
+          await connection.invoke("DeleteMessage", msgId, activeChat.id);
+          setMessages(prev => prev.filter(m => m.id !== msgId));
+      } catch (err) {
+          console.error("Failed to delete message", err);
+      }
+  };
+
+  const handleReportMessage = async (msgId: string) => {
+      if (!confirm("Are you sure you want to report this message to Tixtra Trust & Safety?")) return;
+      try {
+          alert("This message has been securely flagged. The Tixtra Trust & Safety team will review the cryptographic logs.");
+          api.post(`/chat/${msgId}/report`).catch(() => {});
+      } catch (err) {
+          console.error("Failed to report message", err);
+      }
+  };
+
+  const isStudentRole = userRole === "Student" || userRole === "0";
+  const isActiveChatTutor = activeChat?.role === "TUTOR";
+
+  const activeLedger = useMemo(() => ledger.find(l => l.tutorUserId === activeChat?.id), [ledger, activeChat]);
+  const hasTrial = useMemo(() => activeLedger ? allBookings.some(b => b.relationshipId === activeLedger.id && b.type === "Trial") : false, [allBookings, activeLedger]);
+  const isSubscribed = activeLedger ? (activeLedger.isSubscriptionActive || activeLedger.availableHours > 0) : false;
+
+  let ctaType: "BOOK_TRIAL" | "SUBSCRIBE" | "BOOK_LESSON" | null = null;
+  if (isStudentRole && isActiveChatTutor) {
+      if (isSubscribed) ctaType = "BOOK_LESSON";
+      else if (hasTrial) ctaType = "SUBSCRIBE";
+      else ctaType = "BOOK_TRIAL";
+  }
+
+  const [isFetchingCta, setIsFetchingCta] = useState(false);
+  const [ctaModal, setCtaModal] = useState<"TRIAL" | "SUBSCRIBE" | "REGULAR" | null>(null);
+  const [ctaTutorData, setCtaTutorData] = useState<any>(null);
+  const [ctaSlots, setCtaSlots] = useState<any[]>([]);
+
+  const handleCtaClick = async (type: "BOOK_TRIAL" | "SUBSCRIBE" | "BOOK_LESSON") => {
+      if (!activeChat) return;
+      setIsFetchingCta(true);
+      try {
+          const targetId = activeLedger?.tutorId || activeChat.id;
+          let tData = null;
+          const tRes = await api.get(`/tutors/${targetId}`);
+          if (tRes.ok) {
+              tData = await tRes.json();
+          } else {
+              const allTutorsRes = await api.get('/tutors');
+              if (allTutorsRes.ok) {
+                  const allTutors = await allTutorsRes.json();
+                  tData = allTutors.find((t: any) => t.userId === activeChat.id);
+              }
+          }
+          if (!tData) {
+              tData = { id: targetId, userId: activeChat.id, firstName: activeChat.name?.split(' ')[0] || "Instructor", lastName: "", photoUrl: activeChat.photoUrl || activeLedger?.photoUrl, hourlyRate: activeChat.hourlyRate || activeLedger?.rate || 0, totalLessons: 0 };
+          }
+          setCtaTutorData(tData);
+
+          if (type === "BOOK_TRIAL" || type === "BOOK_LESSON") {
+              const sRes = await api.get(`/calendar/tutors/${activeChat.id}/slots`);
+              if (sRes.ok) setCtaSlots(await sRes.json());
+              else setCtaSlots([]);
+          }
+
+          if (type === "BOOK_TRIAL") setCtaModal("TRIAL");
+          else if (type === "SUBSCRIBE") setCtaModal("SUBSCRIBE");
+          else if (type === "BOOK_LESSON") setCtaModal("REGULAR");
+      } catch (e) {
+          alert("Network error fetching booking data.");
+      } finally {
+          setIsFetchingCta(false);
+      }
+  };
+
+  const activeBooking = useMemo(() => {
+    if (!activeChat || !allBookings.length) return null;
+    const upcoming = allBookings.filter((b: any) => b.otherPartyEmail.split('@')[0].toLowerCase() === activeChat.name.toLowerCase() && ['Confirmed', 'Scheduled', 'InProgress'].includes(b.status))
+        .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    if (upcoming.length === 0) return null;
+    return { id: upcoming[0].id, relationshipId: upcoming[0].relationshipId, subject: upcoming[0].type === "Trial" ? "Trial Session" : "Regular Session", startTime: upcoming[0].startTime, tutorName: activeChat.name };
+  }, [activeChat, allBookings]);
+
+  const displayedInbox = useMemo(() => {
+      if (searchQuery) return []; 
+      return inbox.filter(c => {
+          const isArchived = archivedIds.includes(c.id);
+          return viewMode === "ARCHIVED" ? isArchived : !isArchived;
+      });
+  }, [inbox, searchQuery, viewMode, archivedIds]);
+
+  const searchResults = useMemo(() => {
+      const query = searchQuery.toLowerCase();
+      if (!query) return { contacts: [], messages: [] };
+      const validContacts = inbox.filter(c => viewMode === "ARCHIVED" ? archivedIds.includes(c.id) : !archivedIds.includes(c.id));
+      const matchedContacts = validContacts.filter(c => c.name.toLowerCase().includes(query));
+      const matchedMessages = validContacts.flatMap(c => {
+          if (!c.allMessages) return [];
+          return c.allMessages.filter(m => m.text.toLowerCase().includes(query)).map(m => ({ contact: c, message: m }));
+      });
+      return { contacts: matchedContacts, messages: matchedMessages };
+  }, [inbox, searchQuery, viewMode, archivedIds]);
+
+  if (isLoading) return <div className="h-[60vh] flex items-center justify-center text-cyan-400 font-mono tracking-widest uppercase text-xs animate-pulse">Loading Messages...</div>;
+
+  return (
+      <div className="h-[calc(100vh-2rem)] max-w-7xl mx-auto flex flex-col animate-in fade-in duration-500 pb-8">
+          <div className="border-b border-slate-800/50 pb-6 mb-6 shrink-0">
+              <h2 className="text-3xl font-black text-slate-100 tracking-wide uppercase">Messages</h2>
+              <p className="text-slate-400 text-sm mt-1 font-mono tracking-widest uppercase">Your Conversations</p>
+          </div>
+
+          <div className="flex-1 flex overflow-hidden bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl">
+              
+              <ChatSidebar 
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  viewMode={viewMode}
+                  setViewMode={setViewMode}
+                  isStudentRole={isStudentRole}
+                  searchResults={searchResults}
+                  displayedInbox={displayedInbox}
+                  activeChat={activeChat}
+                  handleSelectChat={handleSelectChat}
+                  toggleArchive={toggleArchive}
+                  typingUsers={typingUsers}
+              />
+
+              <ChatArea 
+                  activeChat={activeChat}
+                  messages={messages}
+                  typingUsers={typingUsers}
+                  ctaType={ctaType}
+                  isFetchingCta={isFetchingCta}
+                  handleCtaClick={handleCtaClick}
+                  activeBooking={activeBooking}
+                  sessionUnreadCount={sessionUnreadCount}
+                  isFadingOut={isFadingOut}
+                  searchQuery={searchQuery}
+                  openMessageMenuId={openMessageMenuId}
+                  setOpenMessageMenuId={setOpenMessageMenuId}
+                  handleDeleteMessage={handleDeleteMessage}
+                  handleReportMessage={handleReportMessage}
+                  replyingTo={replyingTo}
+                  setReplyingTo={setReplyingTo}
+                  isStudentRole={isStudentRole}
+                  setChatInput={setChatInput}
+                  template={template}
+                  fileInputRef={fileInputRef}
+                  handleFileUpload={handleFileUpload}
+                  canShareFiles={canShareFiles}
+                  isUploading={isUploading}
+                  chatInput={chatInput}
+                  handleInputChange={handleInputChange}
+                  handleKeyDown={handleKeyDown}
+                  handleSendMessage={handleSendMessage}
+                  chatScrollRef={chatScrollRef}
+              />
+          </div>
+
+          {ctaModal === "TRIAL" && ctaTutorData && (
+              <TrialBookingModal
+                  tutor={{ 
+                      id: ctaTutorData.id, userId: ctaTutorData.userId || activeChat?.id, firstName: ctaTutorData.firstName || activeChat?.name?.split(' ')[0] || "Instructor", lastName: ctaTutorData.lastName || "", photoUrl: ctaTutorData.photoUrl || ctaTutorData.profilePhotoUrl, hourlyRate: ctaTutorData.hourlyRate || 0, rating: ctaTutorData.rating || 5, reviewCount: ctaTutorData.reviewCount || 0, totalLessons: ctaTutorData.totalLessons || 0
+                  }}
+                  availableSlots={ctaSlots} onClose={() => setCtaModal(null)} onSuccess={() => { setCtaModal(null); window.location.reload(); }}
+              />
+          )}
+
+          {ctaModal === "SUBSCRIBE" && ctaTutorData && (
+              <BuyHoursModal
+                  tutor={{ tutorUserId: ctaTutorData.userId, tutorName: ctaTutorData.firstName || activeChat?.name || "Tutor", rate: ctaTutorData.hourlyRate, photoUrl: ctaTutorData.photoUrl }}
+                  onClose={() => setCtaModal(null)} onSuccess={() => { setCtaModal(null); window.location.reload(); }}
+              />
+          )}
+
+          {ctaModal === "REGULAR" && ctaTutorData && activeLedger && (
+              <RegularBookingModal
+                  tutor={{ tutorUserId: ctaTutorData.userId, tutorName: ctaTutorData.firstName || activeChat?.name || "Tutor", photoUrl: ctaTutorData.photoUrl, availableHours: activeLedger.availableHours }}
+                  availableSlots={ctaSlots} onClose={() => setCtaModal(null)} onSuccess={() => { setCtaModal(null); window.location.reload(); }}
+              />
+          )}
+      </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-cyan-400 font-mono text-sm tracking-widest animate-pulse uppercase">Decrypting Comms...</div>}>
+          <MessagesInboxContent />
+      </Suspense>
+  );
+}
