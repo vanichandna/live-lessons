@@ -8,6 +8,8 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Desmos API -->
     <script src="https://www.desmos.com/api/v1.8/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    <!-- jsPDF for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Robust Font Loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,6 +51,8 @@
         #action-bar button:hover { background: rgba(0,0,0,0.05); }
         .primary-btn { background: #2563eb !important; color: white !important; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); }
         .primary-btn:hover { background: #1d4ed8 !important; transform: translateY(-1px); }
+        .success-btn { background: #10b981 !important; color: white !important; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
+        .success-btn:hover { background: #059669 !important; transform: translateY(-1px); }
         .danger-btn { background: #fee2e2 !important; color: #ef4444 !important; }
         .danger-btn:hover { background: #fca5a5 !important; }
 
@@ -143,6 +147,8 @@
             <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
             <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Screen</button>
             <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
+            <!-- NEW: PDF Export Button -->
+            <button class="success-btn" id="btn-export" style="display:none;" onclick="exportPDF()">📄 Export PDF</button>
             <button class="danger-btn" onclick="leaveClassroom()">End Session</button>
         </div>
     </div>
@@ -252,11 +258,9 @@
             catch (e) { console.warn("Storage limit reached."); }
         }
 
-        // UPGRADED: Chunked rendering engine to smoothly redraw the board without crashing the graphics context
         function replayHistory() {
             const chunkSize = 300; 
             let i = 0;
-            
             function drawNextChunk() {
                 const chunk = boardHistory.slice(i, i + chunkSize);
                 chunk.forEach(item => {
@@ -266,16 +270,10 @@
                         drawImageFromData(item.src, item.x, item.y, false); 
                     }
                 });
-                
                 i += chunkSize;
-                if (i < boardHistory.length) {
-                    requestAnimationFrame(drawNextChunk);
-                }
+                if (i < boardHistory.length) { requestAnimationFrame(drawNextChunk); }
             }
-            
-            if (boardHistory.length > 0) {
-                requestAnimationFrame(drawNextChunk);
-            }
+            if (boardHistory.length > 0) { requestAnimationFrame(drawNextChunk); }
         }
 
         let currentTool = 'pen';
@@ -429,6 +427,7 @@
                 document.getElementById('role-overlay').style.display = 'none';
                 document.getElementById('instructor-tools').style.display = 'flex';
                 document.getElementById('btn-screen').style.display = 'inline-block';
+                document.getElementById('btn-export').style.display = 'inline-block'; // Reveal Export Button
                 
                 peer.on('open', (id) => { 
                     document.getElementById('my-id').innerText = id; 
@@ -438,7 +437,6 @@
                         try { 
                             boardHistory = JSON.parse(savedHistory); 
                             ctx.clearRect(0, 0, canvas.width, canvas.height); 
-                            // Slight delay to ensure the canvas is fully mounted/rendered before bulk drawing
                             setTimeout(() => { replayHistory(); }, 300);
                         } catch(e) {} 
                     }
@@ -530,23 +528,38 @@
                 showToast("Connected to secure classroom!");
                 
                 if (userRole === 'instructor') {
-                    if (boardHistory.length > 0) conn.send({ type: 'history-sync', history: boardHistory });
-                    if (document.getElementById('desmos-container').style.display === 'block') {
-                        conn.send({ type: 'desmos-toggle', show: true });
-                        conn.send({ type: 'desmos-state', state: calculator.getState() });
-                    }
-                    conn.send({ type: 'page', page: currentPage });
+                    setTimeout(() => {
+                        const isDesmosOpen = document.getElementById('desmos-container').style.display === 'block';
+                        if (isDesmosOpen) {
+                            conn.send({ type: 'desmos-toggle', show: true });
+                            conn.send({ type: 'desmos-state', state: calculator.getState() });
+                        }
+                        conn.send({ type: 'page', page: currentPage });
+                        
+                        const chunkSize = 200;
+                        let i = 0;
+                        function sendNextChunk() {
+                            if (i < boardHistory.length) {
+                                const chunk = boardHistory.slice(i, i + chunkSize);
+                                conn.send({ type: 'history-chunk', chunk: chunk });
+                                i += chunkSize;
+                                setTimeout(sendNextChunk, 50); 
+                            }
+                        }
+                        sendNextChunk();
+                    }, 500);
+
                 } else {
                     changePage(0, false); 
                 }
             });
             
             conn.on('data', (data) => {
-                if (data.type === 'history-sync') {
-                    boardHistory = data.history; 
-                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
-                    // Let the student's browser cleanly redraw chunks
-                    replayHistory();
+                if (data.type === 'history-chunk') {
+                    data.chunk.forEach(item => {
+                        if (item.type === 'draw') { drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false); } 
+                        else if (item.type === 'image') { drawImageFromData(item.src, item.x, item.y, false); }
+                    });
                 } else if (data.type === 'draw-batch') {
                     data.lines.forEach(l => {
                         drawLine(l.x0, l.y0, l.x1, l.y1, l.color, l.width, l.tool, false);
@@ -668,6 +681,35 @@
                 saveHistoryToStorage();
                 broadcast({ type: 'image', src: src, x: x, y: y });
             }
+        }
+
+        // NEW: Export current viewport to PDF
+        function exportPDF() {
+            showToast("Generating PDF Masterclass notes...");
+            const { jsPDF } = window.jspdf;
+            
+            // Format PDF to match the exact dimensions of your screen
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [window.innerWidth, window.innerHeight] });
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = window.innerWidth;
+            tempCanvas.height = window.innerHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            tempCtx.drawImage(
+                canvas, 
+                workspace.scrollLeft, workspace.scrollTop, window.innerWidth, window.innerHeight,
+                0, 0, window.innerWidth, window.innerHeight
+            );
+            
+            const imgData = tempCanvas.toDataURL('image/jpeg', 1.0);
+            pdf.addImage(imgData, 'JPEG', 0, 0, window.innerWidth, window.innerHeight);
+            pdf.save(`Masterclass_Page${currentPage}.pdf`);
+            
+            showToast("PDF exported successfully!");
         }
 
         function clearCanvas() {
