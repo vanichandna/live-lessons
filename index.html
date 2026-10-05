@@ -172,7 +172,7 @@
     <div id="side-toolbar" class="glass-panel">
         <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move (Del to Delete)">↖️</button>
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
-        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
+        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️️</button>
         <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
         <button class="tool-btn" id="tool-pan" onclick="selectTool('pan')" title="Pan Board">✋</button>
         
@@ -240,6 +240,7 @@
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
         let boardHistory = [];
         let maxPage = 1;
+        let activeRoomKey = 'default'; // Dynamically updated based on Room ID
 
         window.onload = () => {
             const savedRoom = localStorage.getItem('premium_math_last_room');
@@ -288,7 +289,7 @@
         }, 40); 
 
         function saveHistoryToStorage() {
-            try { localStorage.setItem('premium_math_history', JSON.stringify(boardHistory)); } 
+            try { localStorage.setItem('premium_math_history_' + activeRoomKey, JSON.stringify(boardHistory)); } 
             catch (e) { console.warn("Storage limit reached."); }
         }
 
@@ -369,7 +370,7 @@
             workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
             if (emit && userRole === 'instructor') {
                 broadcast({ type: 'page', page: currentPage });
-                localStorage.setItem('premium_math_page', currentPage);
+                localStorage.setItem('premium_math_page_' + activeRoomKey, currentPage);
             }
         }
 
@@ -394,6 +395,7 @@
                 const originalText = btn.innerText;
                 btn.innerText = "Starting Camera...";
                 
+                activeRoomKey = sanitizedId; // Set unique storage key for this room
                 localStorage.setItem('premium_math_last_room', sanitizedId);
                 await initSession('instructor', sanitizedId);
                 
@@ -463,7 +465,7 @@
         let desmosSyncTimeout;
         calculator.observeEvent('change', () => {
             if (isReceivingDesmosState) return; 
-            if (userRole === 'instructor') localStorage.setItem('premium_math_desmos', JSON.stringify(calculator.getState()));
+            if (userRole === 'instructor') localStorage.setItem('premium_math_desmos_' + activeRoomKey, JSON.stringify(calculator.getState()));
             clearTimeout(desmosSyncTimeout);
             desmosSyncTimeout = setTimeout(() => { broadcast({ type: 'desmos-state', state: calculator.getState() }); }, 200);
         });
@@ -502,7 +504,7 @@
                 peer.on('open', (id) => { 
                     document.getElementById('my-id').innerText = id; 
                     
-                    const savedHistory = localStorage.getItem('premium_math_history');
+                    const savedHistory = localStorage.getItem('premium_math_history_' + activeRoomKey);
                     if (savedHistory) { 
                         try { 
                             boardHistory = JSON.parse(savedHistory); 
@@ -537,7 +539,7 @@
                         } catch(e) {} 
                     }
                     
-                    const savedPage = localStorage.getItem('premium_math_page');
+                    const savedPage = localStorage.getItem('premium_math_page_' + activeRoomKey);
                     if (savedPage) { 
                         currentPage = parseInt(savedPage) - 1; 
                         changePage(1, false); 
@@ -545,7 +547,7 @@
                         changePage(0, false); 
                     }
                     
-                    const savedDesmos = localStorage.getItem('premium_math_desmos');
+                    const savedDesmos = localStorage.getItem('premium_math_desmos_' + activeRoomKey);
                     if (savedDesmos) {
                         isReceivingDesmosState = true;
                         calculator.setState(JSON.parse(savedDesmos));
@@ -1146,7 +1148,7 @@
                 if (confirm("Permanently purge all pages and clear board history?")) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     document.querySelectorAll('.board-image').forEach(el => el.remove());
-                    boardHistory = []; localStorage.removeItem('premium_math_history');
+                    boardHistory = []; localStorage.removeItem('premium_math_history_' + activeRoomKey);
                     maxPage = 1;
                     selectedObject = null; updateSelectionUI();
                     changePage(1 - currentPage, true); 
