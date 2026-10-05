@@ -90,7 +90,7 @@
         canvas { background: transparent; display: block; touch-action: none; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: auto; }
         
         /* Active Selection Bounding Box Overlay */
-        #selection-box { display: none; position: absolute; pointer-events: none; border: 2px dashed #2563eb; border-radius: 6px; z-index: 25; }
+        #selection-box { display: none; position: absolute; pointer-events: none; border: 2px dashed #2563eb; border-radius: 6px; z-index: 25; background: rgba(37, 99, 235, 0.05); }
         .sel-handle { position: absolute; width: 10px; height: 10px; background: #2563eb; border-radius: 2px; }
         .sel-tl { top: -5px; left: -5px; }
         .sel-tr { top: -5px; right: -5px; }
@@ -170,9 +170,9 @@
 
     <!-- Premium Side Toolbar -->
     <div id="side-toolbar" class="glass-panel">
-        <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move (Backspace to Delete)">↖️</button>
+        <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move (Del to Delete)">↖️</button>
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
-        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
+        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️️</button>
         <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
         <button class="tool-btn" id="tool-pan" onclick="selectTool('pan')" title="Pan Board">✋</button>
         
@@ -271,7 +271,7 @@
 
         // UNIFIED OBJECT SELECTION STATE
         let currentStrokeId = null;
-        let selectedObject = null; // { type: 'image' | 'stroke', id: string }
+        let selectedObject = null; 
         let isDraggingSelection = false;
         let dragLastX, dragLastY;
 
@@ -312,12 +312,18 @@
             if (boardHistory.length > 0) { requestAnimationFrame(drawNextChunk); }
         }
 
+        let isRedrawing = false;
         function quickRedraw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            boardHistory.forEach(item => {
-                if (item.type === 'draw') { 
-                    drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false, item.strokeId); 
-                }
+            if (isRedrawing) return;
+            isRedrawing = true;
+            requestAnimationFrame(() => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                boardHistory.forEach(item => {
+                    if (item.type === 'draw') { 
+                        drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false, item.strokeId); 
+                    }
+                });
+                isRedrawing = false;
             });
         }
 
@@ -501,10 +507,19 @@
                         try { 
                             boardHistory = JSON.parse(savedHistory); 
                             
-                            // Guarantee all historical strokes are assigned IDs for object selection
+                            // Smart Legacy Grouping: Bind broken pixel fragments back into complete strokes
                             boardHistory.forEach((item, idx) => {
                                 if (item.type === 'draw' && !item.strokeId) {
-                                    item.strokeId = 'stroke_legacy_' + idx;
+                                    if (idx > 0) {
+                                        let prev = boardHistory[idx - 1];
+                                        if (prev.type === 'draw' && prev.x1 === item.x0 && prev.y1 === item.y0) {
+                                            item.strokeId = prev.strokeId;
+                                        } else {
+                                            item.strokeId = 'stroke_legacy_' + idx;
+                                        }
+                                    } else {
+                                        item.strokeId = 'stroke_legacy_0';
+                                    }
                                 }
                             });
 
@@ -685,8 +700,7 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height); 
                     document.querySelectorAll('.board-image').forEach(el => el.remove());
                     boardHistory = []; maxPage = 1;
-                    selectedObject = null;
-                    updateSelectionUI();
+                    selectedObject = null; updateSelectionUI();
                 } else if (data.type === 'page') {
                     currentPage = data.page - 1; changePage(1, false);
                 } else if (data.type === 'stop-screenshare') {
@@ -727,7 +741,7 @@
             const rect = canvas.getBoundingClientRect();
             return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
-        
+
         function dist2(v, w) { return Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); }
         function distToSegmentSquared(p, v, w) {
             var l2 = dist2(v, w);
@@ -737,7 +751,6 @@
             return dist2(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
         }
 
-        // Selection Box UI Synchronizer
         function updateSelectionUI() {
             if (!selectedObject) {
                 selectionBox.style.display = 'none';
@@ -752,8 +765,6 @@
                     selectionBox.style.width = (imgItem.width + 8) + 'px';
                     selectionBox.style.height = (imgItem.height + 8) + 'px';
                     selectionBox.style.display = 'block';
-                } else {
-                    selectionBox.style.display = 'none';
                 }
             } else if (selectedObject.type === 'stroke') {
                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -774,13 +785,10 @@
                     selectionBox.style.width = (maxX - minX + 16) + 'px';
                     selectionBox.style.height = (maxY - minY + 16) + 'px';
                     selectionBox.style.display = 'block';
-                } else {
-                    selectionBox.style.display = 'none';
                 }
             }
         }
 
-        // Keyboard Deletion for Selected Objects
         window.addEventListener('keydown', (e) => {
             if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObject) {
                 if (document.activeElement.tagName === 'INPUT') return;
@@ -825,53 +833,38 @@
             }
         }
 
-        // UNIFIED CANVAS POINTER EVENTS FOR BOTH DRAWING AND SELECTION
+        let dragSyncTimeout = null;
+        let pendingStrokeDx = 0, pendingStrokeDy = 0;
+
         canvas.addEventListener('pointerdown', (e) => { 
             const coords = getCoordinates(e);
 
             if (currentTool === 'select') {
-                // 1. Check if user clicked an Image Object
-                let clickedImage = null;
+                let clickedObjectId = null;
+                let clickedObjectType = null;
+
                 for (let i = boardHistory.length - 1; i >= 0; i--) {
                     const item = boardHistory[i];
                     if (item.type === 'image') {
                         if (coords.x >= item.x && coords.x <= item.x + item.width &&
                             coords.y >= item.y && coords.y <= item.y + item.height) {
-                            clickedImage = item;
+                            clickedObjectId = item.id;
+                            clickedObjectType = 'image';
                             break;
                         }
-                    }
-                }
-
-                if (clickedImage) {
-                    selectedObject = { type: 'image', id: clickedImage.id };
-                    isDraggingSelection = true;
-                    dragLastX = coords.x;
-                    dragLastY = coords.y;
-                    canvas.setPointerCapture(e.pointerId);
-                    canvas.style.cursor = 'grabbing';
-                    updateSelectionUI();
-                    e.preventDefault();
-                    return;
-                }
-
-                // 2. Check if user clicked a Vector Ink Object
-                let clickedStrokeId = null;
-                let minDist = 900; // 30px hit radius
-                for (let i = boardHistory.length - 1; i >= 0; i--) {
-                    const item = boardHistory[i];
-                    if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
+                    } else if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
                         const d2 = distToSegmentSquared({x: coords.x, y: coords.y}, {x: item.x0, y: item.y0}, {x: item.x1, y: item.y1});
-                        const threshold = Math.max(minDist, item.width * item.width * 4);
+                        const threshold = Math.max(900, item.width * item.width * 4); // 30px easy-hit radius
                         if (d2 < threshold) {
-                            clickedStrokeId = item.strokeId;
+                            clickedObjectId = item.strokeId;
+                            clickedObjectType = 'stroke';
                             break;
                         }
                     }
                 }
 
-                if (clickedStrokeId) {
-                    selectedObject = { type: 'stroke', id: clickedStrokeId };
+                if (clickedObjectId) {
+                    selectedObject = { type: clickedObjectType, id: clickedObjectId };
                     isDraggingSelection = true;
                     dragLastX = coords.x;
                     dragLastY = coords.y;
@@ -882,7 +875,6 @@
                     return;
                 }
 
-                // Clicked on empty canvas -> clear selection
                 selectedObject = null;
                 updateSelectionUI();
                 return;
@@ -901,7 +893,6 @@
         canvas.addEventListener('pointermove', (e) => {
             const coords = getCoordinates(e);
 
-            // Handle Active Object Dragging
             if (currentTool === 'select') {
                 if (isDraggingSelection && selectedObject) {
                     const dx = coords.x - dragLastX;
@@ -912,14 +903,16 @@
                     if (selectedObject.type === 'image') {
                         const imgItem = boardHistory.find(i => i.id === selectedObject.id);
                         if (imgItem) {
-                            imgItem.x += dx;
-                            imgItem.y += dy;
+                            imgItem.x += dx; imgItem.y += dy;
                             const el = document.getElementById(selectedObject.id);
-                            if (el) {
-                                el.style.left = imgItem.x + 'px';
-                                el.style.top = imgItem.y + 'px';
+                            if (el) { el.style.left = imgItem.x + 'px'; el.style.top = imgItem.y + 'px'; }
+                            
+                            if (!dragSyncTimeout) {
+                                dragSyncTimeout = setTimeout(() => {
+                                    broadcast({ type: 'image-move', id: selectedObject.id, x: imgItem.x, y: imgItem.y });
+                                    dragSyncTimeout = null;
+                                }, 40);
                             }
-                            broadcast({ type: 'image-move', id: selectedObject.id, x: imgItem.x, y: imgItem.y });
                         }
                     } else if (selectedObject.type === 'stroke') {
                         boardHistory.forEach(item => {
@@ -928,20 +921,27 @@
                             }
                         });
                         quickRedraw();
-                        broadcast({ type: 'stroke-move', strokeId: selectedObject.id, dx: dx, dy: dy });
+                        
+                        pendingStrokeDx += dx;
+                        pendingStrokeDy += dy;
+                        if (!dragSyncTimeout) {
+                            dragSyncTimeout = setTimeout(() => {
+                                broadcast({ type: 'stroke-move', strokeId: selectedObject.id, dx: pendingStrokeDx, dy: pendingStrokeDy });
+                                pendingStrokeDx = 0; pendingStrokeDy = 0;
+                                dragSyncTimeout = null;
+                            }, 40);
+                        }
                     }
 
                     updateSelectionUI();
                     return;
                 }
 
-                // Dynamic Hover Cursor Feedback for Selectable Objects
                 let isOver = false;
                 for (let i = boardHistory.length - 1; i >= 0; i--) {
                     const item = boardHistory[i];
                     if (item.type === 'image') {
-                        if (coords.x >= item.x && coords.x <= item.x + item.width &&
-                            coords.y >= item.y && coords.y <= item.y + item.height) {
+                        if (coords.x >= item.x && coords.x <= item.x + item.width && coords.y >= item.y && coords.y <= item.y + item.height) {
                             isOver = true; break;
                         }
                     } else if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
@@ -967,6 +967,19 @@
                 isDraggingSelection = false;
                 canvas.releasePointerCapture(e.pointerId);
                 canvas.style.cursor = 'grab';
+                
+                if (dragSyncTimeout) {
+                    clearTimeout(dragSyncTimeout);
+                    if (selectedObject.type === 'image') {
+                        const imgItem = boardHistory.find(i => i.id === selectedObject.id);
+                        if (imgItem) broadcast({ type: 'image-move', id: selectedObject.id, x: imgItem.x, y: imgItem.y });
+                    } else if (selectedObject.type === 'stroke') {
+                        broadcast({ type: 'stroke-move', strokeId: selectedObject.id, dx: pendingStrokeDx, dy: pendingStrokeDy });
+                        pendingStrokeDx = 0; pendingStrokeDy = 0;
+                    }
+                    dragSyncTimeout = null;
+                }
+                
                 if (userRole === 'instructor') saveHistoryToStorage();
                 return;
             }
@@ -1091,7 +1104,6 @@
                 tempCtx.fillStyle = '#ffffff';
                 tempCtx.fillRect(0, 0, captureWidth, captureHeight);
                 
-                // 1. Draw Images FIRST
                 boardHistory.forEach(item => {
                     if (item.type === 'image') {
                         if (item.x + item.width > captureX && item.x < captureX + captureWidth && 
@@ -1105,7 +1117,6 @@
                     }
                 });
                 
-                // 2. Draw Ink ON TOP
                 tempCtx.drawImage(
                     canvas, 
                     captureX, captureY, captureWidth, captureHeight,
@@ -1136,8 +1147,7 @@
                     document.querySelectorAll('.board-image').forEach(el => el.remove());
                     boardHistory = []; localStorage.removeItem('premium_math_history');
                     maxPage = 1;
-                    selectedObject = null;
-                    updateSelectionUI();
+                    selectedObject = null; updateSelectionUI();
                     changePage(1 - currentPage, true); 
                     broadcast({ type: 'clear' });
                 }
