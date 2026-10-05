@@ -57,7 +57,7 @@
         .danger-btn:hover { background: #fca5a5 !important; }
 
         /* Side Toolbar */
-        #side-toolbar { position: fixed; top: 90px; left: 24px; transform: none; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 100; align-items: center; max-height: calc(100vh - 180px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+        #side-toolbar { position: fixed; top: 90px; left: 24px; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 100; align-items: center; max-height: calc(100vh - 180px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
         #side-toolbar::-webkit-scrollbar { display: none; }
         
         .tool-btn { width: 48px; height: 48px; border-radius: 12px; border: none; background: transparent; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; color: #64748b; }
@@ -81,16 +81,18 @@
         /* Layered Canvas Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
         
-        /* The container gets the solid white background */
         #board-content { position: relative; width: 8000px; height: 8000px; background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); }
         
-        /* Images placed UNDER the canvas */
+        /* Floating objects sit UNDER the ink layer */
         .board-image { position: absolute; z-index: 5; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid transparent; border-radius: 8px; overflow: hidden; transform-origin: center; transition: border-color 0.2s; user-select: none; }
         .board-image img { width: 100%; height: 100%; display: block; pointer-events: none; }
-        .board-image:hover { border-color: #94a3b8; }
+        .board-image:hover { border-color: #3b82f6; }
         
-        /* The drawing canvas has a transparent background and sits ON TOP of images */
+        /* Ink sits perfectly ON TOP */
         canvas { background: transparent; display: block; touch-action: none; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: auto; }
+        
+        /* Group Selection Marquee Box */
+        #marquee { display: none; position: absolute; border: 2px dashed #2563eb; background: rgba(59, 130, 246, 0.1); z-index: 1000; pointer-events: none; }
         
         /* Enforced Cursors */
         .cursor-select { cursor: default !important; }
@@ -120,7 +122,6 @@
     </style>
 </head>
 <body>
-    <!-- Secure Entry Gate -->
     <div id="role-overlay">
         <h2 class="role-title">Live Mathematics Workspace</h2>
         
@@ -144,7 +145,6 @@
         </div>
     </div>
 
-    <!-- Top Status & A/V Bar -->
     <div id="top-bar">
         <div id="instructor-tools" class="instructor-only">
             <div class="instructor-tag glass-panel">
@@ -163,7 +163,6 @@
         </div>
     </div>
 
-    <!-- Premium Side Toolbar -->
     <div id="side-toolbar" class="glass-panel">
         <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move">↖️</button>
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
@@ -187,7 +186,6 @@
         <button class="tool-btn" id="btn-clear" onclick="clearCanvas()" title="Purge Board History" style="color: #ef4444;">🗑️</button>
     </div>
 
-    <!-- Pagination Footer -->
     <div id="pagination-bar" class="glass-panel">
         <button class="page-btn" id="btn-prev" onclick="changePage(-1)">◀</button>
         <span id="page-indicator">Page 1</span>
@@ -197,11 +195,10 @@
     <div id="workspace">
         <div id="board-content">
             <canvas id="whiteboard"></canvas>
-            <!-- Images will spawn here, behind the transparent canvas -->
+            <div id="marquee"></div>
         </div>
     </div>
 
-    <!-- Floating Panels -->
     <div id="desmos-container" class="draggable-panel glass-panel">
         <div id="desmos-drag-handle" class="drag-handle">
             <span>Graphing Calculator</span>
@@ -241,6 +238,7 @@
         const ctx = canvas.getContext('2d', { desynchronized: true, willReadFrequently: false });
         const workspace = document.getElementById('workspace');
         const boardContent = document.getElementById('board-content');
+        const marquee = document.getElementById('marquee');
         
         const CANVAS_SIZE = 8000;
         const PAGE_OFFSET = 2000; 
@@ -284,8 +282,10 @@
                 chunk.forEach(item => {
                     if (item.type === 'draw') { 
                         drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false); 
+                    } else if (item.type === 'erase-rect') {
+                        ctx.clearRect(item.x, item.y, item.w, item.h);
                     } else if (item.type === 'image') { 
-                        placeImageObject(item.id, item.src, item.x, item.y, item.width, item.height, false); 
+                        spawnImageDOM(item.id, item.src, item.x, item.y, item.width, item.height); 
                     }
                 });
                 i += chunkSize;
@@ -303,7 +303,6 @@
             document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tool-' + tool).classList.add('active');
             
-            // Apply cursors to workspace and canvas
             workspace.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing', 'cursor-select');
             workspace.classList.add('cursor-' + tool);
             canvas.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing', 'cursor-select');
@@ -311,15 +310,13 @@
             
             workspace.style.overflow = tool === 'pan' ? 'auto' : 'hidden';
 
-            // CRUCIAL: Allow clicking through the canvas to the images when select tool is active
+            // Make the ink layer click-through when selecting to allow grabbing objects underneath
             if (tool === 'select') {
                 canvas.style.pointerEvents = 'none';
             } else {
                 canvas.style.pointerEvents = 'auto';
             }
         }
-        
-        // Initialize tool
         selectTool('pen');
 
         function selectColor(color, btnElement) {
@@ -374,11 +371,20 @@
             }
         }
 
+        // ==========================================
+        // SMART GROUP SELECTION & DRAG MANAGER
+        // ==========================================
         let isPanning = false, startPanX, startPanY, startScrollLeft, startScrollTop;
         let panSyncTimeout;
         
-        workspace.addEventListener('pointerdown', (e) => {
-            if (currentTool === 'pan' || e.button === 1 || e.shiftKey) { 
+        let isMarqueeSelecting = false;
+        let marqueeStartX, marqueeStartY;
+        
+        let draggedImageId = null;
+        let dragStartX, dragStartY, dragOrigX, dragOrigY;
+
+        boardContent.addEventListener('pointerdown', (e) => {
+            if (e.button === 1 || e.shiftKey || currentTool === 'pan') { 
                 isPanning = true; startPanX = e.clientX; startPanY = e.clientY;
                 startScrollLeft = workspace.scrollLeft; startScrollTop = workspace.scrollTop;
                 if (currentTool === 'pan') {
@@ -386,41 +392,201 @@
                     canvas.classList.replace('cursor-pan', 'cursor-grabbing');
                 }
                 e.preventDefault();
+                return;
+            }
+
+            if (currentTool === 'select') {
+                const imgContainer = e.target.closest('.board-image');
+                if (imgContainer) {
+                    draggedImageId = imgContainer.id;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                    dragOrigX = parseInt(imgContainer.style.left);
+                    dragOrigY = parseInt(imgContainer.style.top);
+                    imgContainer.style.cursor = 'grabbing';
+                    e.stopPropagation();
+                } else {
+                    // Start Marquee Selection
+                    isMarqueeSelecting = true;
+                    const rect = boardContent.getBoundingClientRect();
+                    marqueeStartX = e.clientX - rect.left;
+                    marqueeStartY = e.clientY - rect.top;
+                    
+                    marquee.style.left = marqueeStartX + 'px';
+                    marquee.style.top = marqueeStartY + 'px';
+                    marquee.style.width = '0px';
+                    marquee.style.height = '0px';
+                    marquee.style.display = 'block';
+                }
             }
         });
         
-        workspace.addEventListener('pointermove', (e) => {
-            if (!isPanning) return;
-            workspace.scrollLeft = startScrollLeft - (e.clientX - startPanX);
-            workspace.scrollTop = startScrollTop - (e.clientY - startPanY);
-            
-            clearTimeout(panSyncTimeout);
-            panSyncTimeout = setTimeout(() => {
-                broadcast({ type: 'pan', scrollLeft: workspace.scrollLeft, scrollTop: workspace.scrollTop });
-            }, 20); 
+        window.addEventListener('pointermove', (e) => {
+            if (isPanning) {
+                workspace.scrollLeft = startScrollLeft - (e.clientX - startPanX);
+                workspace.scrollTop = startScrollTop - (e.clientY - startPanY);
+                clearTimeout(panSyncTimeout);
+                panSyncTimeout = setTimeout(() => {
+                    broadcast({ type: 'pan', scrollLeft: workspace.scrollLeft, scrollTop: workspace.scrollTop });
+                }, 20); 
+                return;
+            }
+
+            if (draggedImageId) {
+                const imgContainer = document.getElementById(draggedImageId);
+                if (!imgContainer) return;
+                const dx = e.clientX - dragStartX;
+                const dy = e.clientY - dragStartY;
+                imgContainer.style.left = (dragOrigX + dx) + 'px';
+                imgContainer.style.top = (dragOrigY + dy) + 'px';
+
+                clearTimeout(imgContainer.syncTimeout);
+                imgContainer.syncTimeout = setTimeout(() => {
+                    broadcast({ type: 'image-move', id: draggedImageId, x: dragOrigX + dx, y: dragOrigY + dy });
+                }, 40);
+                return;
+            }
+
+            if (isMarqueeSelecting) {
+                const rect = boardContent.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
+                marquee.style.left = Math.min(marqueeStartX, currentX) + 'px';
+                marquee.style.top = Math.min(marqueeStartY, currentY) + 'px';
+                marquee.style.width = Math.abs(currentX - marqueeStartX) + 'px';
+                marquee.style.height = Math.abs(currentY - marqueeStartY) + 'px';
+            }
         });
         
         window.addEventListener('pointerup', () => { 
-            isPanning = false; 
-            if (currentTool === 'pan') {
-                workspace.classList.replace('cursor-grabbing', 'cursor-pan');
-                canvas.classList.replace('cursor-grabbing', 'cursor-pan');
+            if (isPanning) {
+                isPanning = false; 
+                if (currentTool === 'pan') {
+                    workspace.classList.replace('cursor-grabbing', 'cursor-pan');
+                    canvas.classList.replace('cursor-grabbing', 'cursor-pan');
+                }
+            }
+
+            if (draggedImageId) {
+                const imgContainer = document.getElementById(draggedImageId);
+                if (imgContainer) {
+                    imgContainer.style.cursor = '';
+                    const newX = parseInt(imgContainer.style.left);
+                    const newY = parseInt(imgContainer.style.top);
+                    const histItem = boardHistory.find(i => i.id === draggedImageId);
+                    if (histItem) { histItem.x = newX; histItem.y = newY; }
+                    if (userRole === 'instructor') saveHistoryToStorage();
+                    broadcast({ type: 'image-move', id: draggedImageId, x: newX, y: newY });
+                }
+                draggedImageId = null;
+            }
+
+            if (isMarqueeSelecting) {
+                isMarqueeSelecting = false;
+                marquee.style.display = 'none';
+
+                const x = parseInt(marquee.style.left);
+                const y = parseInt(marquee.style.top);
+                const w = parseInt(marquee.style.width);
+                const h = parseInt(marquee.style.height);
+
+                if (w > 20 && h > 20) {
+                    processMarqueeSelection(x, y, w, h);
+                }
             }
         });
 
+        // Flattens selected ink and images into a single movable object
+        function processMarqueeSelection(x, y, w, h) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = w;
+            tempCanvas.height = h;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            let hasContent = false;
+
+            // 1. Find and capture full images inside the box
+            const imagesToMerge = [];
+            boardHistory.forEach(item => {
+                if (item.type === 'image') {
+                    if (item.x >= x && item.x + item.width <= x + w &&
+                        item.y >= y && item.y + item.height <= y + h) {
+                        imagesToMerge.push(item);
+                        hasContent = true;
+                    }
+                }
+            });
+
+            imagesToMerge.forEach(item => {
+                const domEl = document.getElementById(item.id);
+                if (domEl) {
+                    const imgEl = domEl.querySelector('img');
+                    tempCtx.drawImage(imgEl, item.x - x, item.y - y, item.width, item.height);
+                    domEl.remove();
+                    boardHistory = boardHistory.filter(i => i.id !== item.id);
+                    broadcast({ type: 'delete-image', id: item.id });
+                }
+            });
+
+            // 2. Capture the ink layer
+            tempCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+            
+            const imgData = tempCtx.getImageData(0, 0, w, h).data;
+            for (let i = 3; i < imgData.length; i += 4) {
+                if (imgData[i] > 0) { hasContent = true; break; }
+            }
+
+            if (!hasContent) return; 
+
+            // 3. Clear the main canvas and spawn the grouped object
+            ctx.clearRect(x, y, w, h);
+            
+            const eraseCmd = { type: 'erase-rect', x, y, w, h };
+            boardHistory.push(eraseCmd);
+            broadcast(eraseCmd);
+            
+            const base64 = tempCanvas.toDataURL('image/png');
+            const newId = 'img_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+            
+            spawnImageDOM(newId, base64, x, y, w, h);
+            const newItem = { type: 'image', id: newId, src: base64, x, y, width: w, height: h };
+            boardHistory.push(newItem);
+            broadcast(newItem);
+            
+            saveHistoryToStorage();
+        }
+
+        function spawnImageDOM(id, src, x, y, width, height) {
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'board-image';
+            imgContainer.id = id;
+            imgContainer.style.left = x + 'px';
+            imgContainer.style.top = y + 'px';
+            imgContainer.style.width = width + 'px';
+            imgContainer.style.height = height + 'px';
+
+            const img = new Image();
+            img.src = src;
+            imgContainer.appendChild(img);
+            boardContent.appendChild(imgContainer);
+        }
+
+        // ==========================================
+        // FLOATING PANELS
+        // ==========================================
         function makeDraggable(elementId, handleId) {
             const el = document.getElementById(elementId);
             const handle = document.getElementById(handleId);
-            let isDraggingWin = false, startX, startY;
+            let isDraggingWin = false, winStartX, winStartY;
 
             handle.addEventListener('mousedown', (e) => {
-                isDraggingWin = true; startX = e.clientX - el.offsetLeft; startY = e.clientY - el.offsetTop;
+                isDraggingWin = true; winStartX = e.clientX - el.offsetLeft; winStartY = e.clientY - el.offsetTop;
                 document.querySelectorAll('.draggable-panel').forEach(p => p.style.zIndex = 200);
                 el.style.zIndex = 201;
             });
             document.addEventListener('mousemove', (e) => {
                 if (!isDraggingWin) return;
-                el.style.left = (e.clientX - startX) + 'px'; el.style.top = (e.clientY - startY) + 'px';
+                el.style.left = (e.clientX - winStartX) + 'px'; el.style.top = (e.clientY - winStartY) + 'px';
             });
             document.addEventListener('mouseup', () => { isDraggingWin = false; });
         }
@@ -439,6 +605,9 @@
             desmosSyncTimeout = setTimeout(() => { broadcast({ type: 'desmos-state', state: calculator.getState() }); }, 200);
         });
 
+        // ==========================================
+        // PEERJS WEBRTC CONNECTION ENGINE
+        // ==========================================
         async function initSession(role, roomId = null) {
             if (peer) return; 
             userRole = role;
@@ -447,7 +616,7 @@
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 document.getElementById('local-video').srcObject = localStream;
             } catch(err) {
-                console.log("Camera access bypassed/denied by user.");
+                console.log("Camera access bypassed.");
             }
 
             const peerConfig = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
@@ -482,9 +651,11 @@
                             
                             boardHistory.forEach(item => {
                                 let itemX = item.type === 'image' ? item.x : item.x0;
-                                let relativeX = itemX - (CANVAS_SIZE / 2);
-                                let p = Math.floor((relativeX + (PAGE_OFFSET/2)) / PAGE_OFFSET) + 1;
-                                if (p > maxPage) maxPage = p;
+                                if (itemX !== undefined) {
+                                    let relativeX = itemX - (CANVAS_SIZE / 2);
+                                    let p = Math.floor((relativeX + (PAGE_OFFSET/2)) / PAGE_OFFSET) + 1;
+                                    if (p > maxPage) maxPage = p;
+                                }
                             });
                         } catch(e) {} 
                     }
@@ -611,7 +782,8 @@
                 if (data.type === 'history-chunk') {
                     data.chunk.forEach(item => {
                         if (item.type === 'draw') { drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false); } 
-                        else if (item.type === 'image') { placeImageObject(item.id, item.src, item.x, item.y, item.width, item.height, false); }
+                        else if (item.type === 'erase-rect') { ctx.clearRect(item.x, item.y, item.w, item.h); }
+                        else if (item.type === 'image') { spawnImageDOM(item.id, item.src, item.x, item.y, item.width, item.height); }
                     });
                 } else if (data.type === 'draw-batch') {
                     data.lines.forEach(l => {
@@ -620,9 +792,21 @@
                     });
                     if (userRole === 'instructor') saveHistoryToStorage();
                 } else if (data.type === 'image') {
-                    placeImageObject(data.id, data.src, data.x, data.y, data.width, data.height, false);
+                    spawnImageDOM(data.id, data.src, data.x, data.y, data.width, data.height);
                     if (userRole === 'instructor') {
                         boardHistory.push(data);
+                        saveHistoryToStorage();
+                    }
+                } else if (data.type === 'erase-rect') {
+                    ctx.clearRect(data.x, data.y, data.w, data.h);
+                    if (userRole === 'instructor') {
+                        boardHistory.push(data);
+                        saveHistoryToStorage();
+                    }
+                } else if (data.type === 'delete-image') {
+                    document.getElementById(data.id)?.remove();
+                    if (userRole === 'instructor') {
+                        boardHistory = boardHistory.filter(i => i.id !== data.id);
                         saveHistoryToStorage();
                     }
                 } else if (data.type === 'image-move') {
@@ -674,6 +858,9 @@
             connections.forEach(conn => { if (conn.open) conn.send(data); });
         }
 
+        // ==========================================
+        // DRAWING LOGIC
+        // ==========================================
         function getCoordinates(e) {
             const rect = canvas.getBoundingClientRect();
             return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -717,73 +904,9 @@
         canvas.addEventListener('pointerup', (e) => { isDrawing = false; canvas.releasePointerCapture(e.pointerId); });
         canvas.addEventListener('pointercancel', () => isDrawing = false);
 
-        function placeImageObject(id, src, x, y, width, height, emit = false) {
-            const imgContainer = document.createElement('div');
-            imgContainer.className = 'board-image';
-            imgContainer.id = id;
-            imgContainer.style.left = x + 'px';
-            imgContainer.style.top = y + 'px';
-            imgContainer.style.width = width + 'px';
-            imgContainer.style.height = height + 'px';
-
-            const img = new Image();
-            img.src = src;
-            imgContainer.appendChild(img);
-            boardContent.appendChild(imgContainer);
-
-            let isDraggingObj = false, startX, startY, origX, origY;
-            
-            imgContainer.addEventListener('pointerdown', (e) => {
-                if (currentTool !== 'select') return;
-                e.stopPropagation(); 
-                isDraggingObj = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                origX = parseInt(imgContainer.style.left);
-                origY = parseInt(imgContainer.style.top);
-                imgContainer.style.cursor = 'grabbing';
-            });
-            
-            window.addEventListener('pointermove', (e) => {
-                if (!isDraggingObj) return;
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                imgContainer.style.left = (origX + dx) + 'px';
-                imgContainer.style.top = (origY + dy) + 'px';
-                
-                clearTimeout(imgContainer.syncTimeout);
-                imgContainer.syncTimeout = setTimeout(() => {
-                    broadcast({ type: 'image-move', id: id, x: origX + dx, y: origY + dy });
-                }, 40);
-            });
-            
-            window.addEventListener('pointerup', () => {
-                if (!isDraggingObj) return;
-                isDraggingObj = false;
-                imgContainer.style.cursor = '';
-                
-                const newX = parseInt(imgContainer.style.left);
-                const newY = parseInt(imgContainer.style.top);
-                
-                const histItem = boardHistory.find(i => i.id === id);
-                if (histItem) { histItem.x = newX; histItem.y = newY; }
-                if (userRole === 'instructor') saveHistoryToStorage();
-                
-                broadcast({ type: 'image-move', id: id, x: newX, y: newY });
-            });
-
-            if (emit && userRole === 'instructor') {
-                const item = { type: 'image', id, src, x, y, width, height };
-                boardHistory.push(item);
-                saveHistoryToStorage();
-                broadcast(item);
-                
-                let relativeX = x - (CANVAS_SIZE / 2);
-                let p = Math.floor((relativeX + (PAGE_OFFSET/2)) / PAGE_OFFSET) + 1;
-                if (p > maxPage) maxPage = p;
-            }
-        }
-
+        // ==========================================
+        // PASTING IMAGES
+        // ==========================================
         window.addEventListener('paste', function(e) {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (let i = 0; i < items.length; i++) {
@@ -796,14 +919,22 @@
                         
                         const img = new Image();
                         img.onload = function() {
-                            let w = img.width;
-                            let h = img.height;
-                            if (w > 800) {
-                                h = h * (800 / w);
-                                w = 800;
-                            }
+                            let w = img.width; let h = img.height;
+                            if (w > 800) { h = h * (800 / w); w = 800; }
                             const imgId = 'img_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-                            placeImageObject(imgId, base64data, x, y, w, h, true);
+                            
+                            spawnImageDOM(imgId, base64data, x, y, w, h);
+                            
+                            if (userRole === 'instructor') {
+                                const item = { type: 'image', id: imgId, src: base64data, x, y, width: w, height: h };
+                                boardHistory.push(item);
+                                saveHistoryToStorage();
+                                broadcast(item);
+                                
+                                let relativeX = x - (CANVAS_SIZE / 2);
+                                let p = Math.floor((relativeX + (PAGE_OFFSET/2)) / PAGE_OFFSET) + 1;
+                                if (p > maxPage) maxPage = p;
+                            }
                         };
                         img.src = base64data;
                     };
@@ -812,6 +943,9 @@
             }
         });
 
+        // ==========================================
+        // EXPORT PDF
+        // ==========================================
         function exportPDF() {
             showToast("Analyzing board boundaries and generating comprehensive PDF... Please wait.");
             const { jsPDF } = window.jspdf;
@@ -848,55 +982,38 @@
                 let captureX, captureY, captureWidth, captureHeight;
                 
                 if (minX === Infinity) {
-                    captureWidth = 1920;
-                    captureHeight = 1080;
-                    captureX = centerX - (captureWidth / 2);
-                    captureY = (CANVAS_SIZE / 2) - (captureHeight / 2);
+                    captureWidth = 1920; captureHeight = 1080;
+                    captureX = centerX - (captureWidth / 2); captureY = (CANVAS_SIZE / 2) - (captureHeight / 2);
                 } else {
                     const padding = 150;
-                    captureX = minX - padding;
-                    captureY = minY - padding;
-                    captureWidth = (maxX - minX) + (padding * 2);
-                    captureHeight = (maxY - minY) + (padding * 2);
+                    captureX = minX - padding; captureY = minY - padding;
+                    captureWidth = (maxX - minX) + (padding * 2); captureHeight = (maxY - minY) + (padding * 2);
                     
-                    captureWidth = Math.max(captureWidth, 1920);
-                    captureHeight = Math.max(captureHeight, 1080);
+                    captureWidth = Math.max(captureWidth, 1920); captureHeight = Math.max(captureHeight, 1080);
                 }
                 
-                tempCanvas.width = captureWidth;
-                tempCanvas.height = captureHeight;
+                tempCanvas.width = captureWidth; tempCanvas.height = captureHeight;
+                tempCtx.fillStyle = '#ffffff'; tempCtx.fillRect(0, 0, captureWidth, captureHeight);
                 
-                tempCtx.fillStyle = '#ffffff';
-                tempCtx.fillRect(0, 0, captureWidth, captureHeight);
-                
-                // 1. Draw Images FIRST
+                // 1. Draw Images FIRST (Bottom Layer)
                 boardHistory.forEach(item => {
                     if (item.type === 'image') {
                         if (item.x + item.width > captureX && item.x < captureX + captureWidth && 
                             item.y + item.height > captureY && item.y < captureY + captureHeight) {
                             
                             const imgEl = document.getElementById(item.id)?.querySelector('img');
-                            if (imgEl) {
-                                tempCtx.drawImage(imgEl, item.x - captureX, item.y - captureY, item.width, item.height);
-                            }
+                            if (imgEl) tempCtx.drawImage(imgEl, item.x - captureX, item.y - captureY, item.width, item.height);
                         }
                     }
                 });
                 
                 // 2. Draw Ink ON TOP
-                tempCtx.drawImage(
-                    canvas, 
-                    captureX, captureY, captureWidth, captureHeight,
-                    0, 0, captureWidth, captureHeight
-                );
+                tempCtx.drawImage(canvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
                 
                 const orientation = captureWidth > captureHeight ? 'landscape' : 'portrait';
                 
-                if (p === 1) {
-                    pdf = new jsPDF({ orientation: orientation, unit: 'px', format: [captureWidth, captureHeight] });
-                } else {
-                    pdf.addPage([captureWidth, captureHeight], orientation);
-                }
+                if (p === 1) pdf = new jsPDF({ orientation: orientation, unit: 'px', format: [captureWidth, captureHeight] });
+                else pdf.addPage([captureWidth, captureHeight], orientation);
                 
                 const imgData = tempCanvas.toDataURL('image/jpeg', 0.95);
                 pdf.addImage(imgData, 'JPEG', 0, 0, captureWidth, captureHeight);
@@ -907,14 +1024,16 @@
             showToast("Complete PDF exported successfully!");
         }
 
+        // ==========================================
+        // SYSTEM CONTROLS
+        // ==========================================
         function clearCanvas() {
             if (userRole === 'instructor') {
                 if (confirm("Permanently purge all pages and clear board history?")) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     document.querySelectorAll('.board-image').forEach(el => el.remove());
                     boardHistory = []; localStorage.removeItem('premium_math_history');
-                    maxPage = 1;
-                    changePage(1 - currentPage, true); 
+                    maxPage = 1; changePage(1 - currentPage, true); 
                     broadcast({ type: 'clear' });
                 }
             }
