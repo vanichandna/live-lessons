@@ -172,7 +172,7 @@
     <div id="side-toolbar" class="glass-panel">
         <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move (Del to Delete)">↖️</button>
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
-        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️️</button>
+        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
         <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
         <button class="tool-btn" id="tool-pan" onclick="selectTool('pan')" title="Pan Board">✋</button>
         
@@ -507,18 +507,20 @@
                         try { 
                             boardHistory = JSON.parse(savedHistory); 
                             
-                            // Smart Legacy Grouping: Bind broken pixel fragments back into complete strokes
+                            // EXACT Connection Recovery: Stitch old fragments ONLY if coordinates connect perfectly without lifting
+                            let activeLegacyId = 'stroke_legacy_0';
                             boardHistory.forEach((item, idx) => {
                                 if (item.type === 'draw' && !item.strokeId) {
                                     if (idx > 0) {
                                         let prev = boardHistory[idx - 1];
                                         if (prev.type === 'draw' && prev.x1 === item.x0 && prev.y1 === item.y0) {
-                                            item.strokeId = prev.strokeId;
+                                            item.strokeId = activeLegacyId;
                                         } else {
-                                            item.strokeId = 'stroke_legacy_' + idx;
+                                            activeLegacyId = 'stroke_legacy_' + idx;
+                                            item.strokeId = activeLegacyId;
                                         }
                                     } else {
-                                        item.strokeId = 'stroke_legacy_0';
+                                        item.strokeId = activeLegacyId;
                                     }
                                 }
                             });
@@ -656,21 +658,20 @@
             conn.on('data', (data) => {
                 if (data.type === 'history-chunk') {
                     data.chunk.forEach(item => {
+                        boardHistory.push(item);
                         if (item.type === 'draw') { drawLine(item.x0, item.y0, item.x1, item.y1, item.color, item.width, item.tool, false, item.strokeId); } 
                         else if (item.type === 'image') { placeImageObject(item.id, item.src, item.x, item.y, item.width, item.height, false); }
                     });
                 } else if (data.type === 'draw-batch') {
                     data.lines.forEach(l => {
                         drawLine(l.x0, l.y0, l.x1, l.y1, l.color, l.width, l.tool, false, l.strokeId);
-                        if (userRole === 'instructor') boardHistory.push({ type: 'draw', ...l });
+                        boardHistory.push({ type: 'draw', ...l });
                     });
                     if (userRole === 'instructor') saveHistoryToStorage();
                 } else if (data.type === 'image') {
                     placeImageObject(data.id, data.src, data.x, data.y, data.width, data.height, false);
-                    if (userRole === 'instructor') {
-                        boardHistory.push(data);
-                        saveHistoryToStorage();
-                    }
+                    boardHistory.push(data);
+                    if (userRole === 'instructor') saveHistoryToStorage();
                 } else if (data.type === 'image-move') {
                     const el = document.getElementById(data.id);
                     if (el) { el.style.left = data.x + 'px'; el.style.top = data.y + 'px'; }
@@ -854,7 +855,7 @@
                         }
                     } else if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
                         const d2 = distToSegmentSquared({x: coords.x, y: coords.y}, {x: item.x0, y: item.y0}, {x: item.x1, y: item.y1});
-                        const threshold = Math.max(900, item.width * item.width * 4); // 30px easy-hit radius
+                        const threshold = Math.max(900, item.width * item.width * 4); 
                         if (d2 < threshold) {
                             clickedObjectId = item.strokeId;
                             clickedObjectType = 'stroke';
