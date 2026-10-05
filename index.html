@@ -213,7 +213,7 @@
     <script>
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
         let boardHistory = [];
-        let maxPage = 1; // Tracks the maximum number of pages used
+        let maxPage = 1;
 
         window.onload = () => {
             const savedRoom = localStorage.getItem('premium_math_last_room');
@@ -299,7 +299,7 @@
         function changePage(dir, emit = true) {
             currentPage += dir;
             if (currentPage < 1) currentPage = 1;
-            if (currentPage > maxPage) maxPage = currentPage; // Update highest page tracker
+            if (currentPage > maxPage) maxPage = currentPage; 
 
             document.getElementById('page-indicator').innerText = `Page ${currentPage}`;
             const targetX = (CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET) - (window.innerWidth / 2);
@@ -440,6 +440,14 @@
                             boardHistory = JSON.parse(savedHistory); 
                             ctx.clearRect(0, 0, canvas.width, canvas.height); 
                             setTimeout(() => { replayHistory(); }, 300);
+                            
+                            // Re-calculate max pages from loaded history
+                            boardHistory.forEach(item => {
+                                let itemX = item.type === 'image' ? item.x : item.x0;
+                                let relativeX = itemX - (CANVAS_SIZE / 2);
+                                let p = Math.floor((relativeX + (PAGE_OFFSET/2)) / PAGE_OFFSET) + 1;
+                                if (p > maxPage) maxPage = p;
+                            });
                         } catch(e) {} 
                     }
                     
@@ -687,48 +695,96 @@
                 boardHistory.push({ type: 'image', src: src, x: x, y: y });
                 saveHistoryToStorage();
                 broadcast({ type: 'image', src: src, x: x, y: y });
+                
+                // Ensure max page updates if image pasted on a new page
+                let relativeX = x - (CANVAS_SIZE / 2);
+                let p = Math.floor((relativeX + (PAGE_OFFSET/2)) / PAGE_OFFSET) + 1;
+                if (p > maxPage) maxPage = p;
             }
         }
 
-        // FULL MULTI-PAGE PDF EXPORT ENGINE
+        // FULL MULTI-PAGE DYNAMIC PDF EXPORT ENGINE
         function exportPDF() {
-            showToast("Generating comprehensive Masterclass PDF... Please wait.");
+            showToast("Analyzing board boundaries and generating comprehensive PDF... Please wait.");
             const { jsPDF } = window.jspdf;
             
-            // Capture a massive 2000x1125 16:9 area per page to ensure nothing is cut off
-            const pdfWidth = 2000;
-            const pdfHeight = 1125;
-            
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [pdfWidth, pdfHeight] });
-            
+            let pdf;
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = pdfWidth;
-            tempCanvas.height = pdfHeight;
             const tempCtx = tempCanvas.getContext('2d');
             
             for (let p = 1; p <= maxPage; p++) {
-                if (p > 1) pdf.addPage();
-                
                 const centerX = (CANVAS_SIZE / 2) + ((p - 1) * PAGE_OFFSET);
-                const centerY = CANVAS_SIZE / 2;
+                const pageMinX = centerX - (PAGE_OFFSET / 2);
+                const pageMaxX = centerX + (PAGE_OFFSET / 2);
                 
-                const targetX = centerX - (pdfWidth / 2);
-                const targetY = centerY - (pdfHeight / 2);
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                
+                // Scan history to find the exact boundaries of all content on this page
+                boardHistory.forEach(item => {
+                    if (item.type === 'draw') {
+                        if ((item.x0 >= pageMinX && item.x0 <= pageMaxX) || (item.x1 >= pageMinX && item.x1 <= pageMaxX)) {
+                            minX = Math.min(minX, item.x0, item.x1);
+                            minY = Math.min(minY, item.y0, item.y1);
+                            maxX = Math.max(maxX, item.x0, item.x1);
+                            maxY = Math.max(maxY, item.y0, item.y1);
+                        }
+                    } else if (item.type === 'image') {
+                        if (item.x >= pageMinX && item.x <= pageMaxX) {
+                            minX = Math.min(minX, item.x);
+                            minY = Math.min(minY, item.y);
+                            maxX = Math.max(maxX, item.x + 800); // Buffer for image width
+                            maxY = Math.max(maxY, item.y + 800); // Buffer for image height
+                        }
+                    }
+                });
+                
+                let captureX, captureY, captureWidth, captureHeight;
+                
+                if (minX === Infinity) {
+                    // Empty page: default to standard 1080p size around center
+                    captureWidth = 1920;
+                    captureHeight = 1080;
+                    captureX = centerX - (captureWidth / 2);
+                    captureY = (CANVAS_SIZE / 2) - (captureHeight / 2);
+                } else {
+                    // Add a healthy 150px margin around the furthest ink strokes
+                    const padding = 150;
+                    captureX = minX - padding;
+                    captureY = minY - padding;
+                    captureWidth = (maxX - minX) + (padding * 2);
+                    captureHeight = (maxY - minY) + (padding * 2);
+                    
+                    // Ensure the PDF page doesn't become weirdly thin if they only drew a single line
+                    captureWidth = Math.max(captureWidth, 1920);
+                    captureHeight = Math.max(captureHeight, 1080);
+                }
+                
+                tempCanvas.width = captureWidth;
+                tempCanvas.height = captureHeight;
                 
                 tempCtx.fillStyle = '#ffffff';
-                tempCtx.fillRect(0, 0, pdfWidth, pdfHeight);
+                tempCtx.fillRect(0, 0, captureWidth, captureHeight);
                 
                 tempCtx.drawImage(
                     canvas, 
-                    targetX, targetY, pdfWidth, pdfHeight,
-                    0, 0, pdfWidth, pdfHeight
+                    captureX, captureY, captureWidth, captureHeight,
+                    0, 0, captureWidth, captureHeight
                 );
                 
-                const imgData = tempCanvas.toDataURL('image/jpeg', 1.0);
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                const orientation = captureWidth > captureHeight ? 'landscape' : 'portrait';
+                
+                if (p === 1) {
+                    pdf = new jsPDF({ orientation: orientation, unit: 'px', format: [captureWidth, captureHeight] });
+                } else {
+                    pdf.addPage([captureWidth, captureHeight], orientation);
+                }
+                
+                const imgData = tempCanvas.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(imgData, 'JPEG', 0, 0, captureWidth, captureHeight);
             }
             
-            pdf.save(`Complete_Masterclass_Notes.pdf`);
+            const roomName = document.getElementById('custom-room-id').value || 'Export';
+            pdf.save(`Masterclass_Notes_${roomName}.pdf`);
             showToast("Complete PDF exported successfully!");
         }
 
@@ -738,7 +794,7 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     boardHistory = []; localStorage.removeItem('premium_math_history');
                     maxPage = 1;
-                    changePage(1 - currentPage, true); // Jump back to page 1 safely
+                    changePage(1 - currentPage, true);
                     broadcast({ type: 'clear' });
                 }
             }
