@@ -147,7 +147,6 @@
             <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
             <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Screen</button>
             <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
-            <!-- NEW: PDF Export Button -->
             <button class="success-btn" id="btn-export" style="display:none;" onclick="exportPDF()">📄 Export PDF</button>
             <button class="danger-btn" onclick="leaveClassroom()">End Session</button>
         </div>
@@ -214,6 +213,7 @@
     <script>
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
         let boardHistory = [];
+        let maxPage = 1; // Tracks the maximum number of pages used
 
         window.onload = () => {
             const savedRoom = localStorage.getItem('premium_math_last_room');
@@ -299,6 +299,8 @@
         function changePage(dir, emit = true) {
             currentPage += dir;
             if (currentPage < 1) currentPage = 1;
+            if (currentPage > maxPage) maxPage = currentPage; // Update highest page tracker
+
             document.getElementById('page-indicator').innerText = `Page ${currentPage}`;
             const targetX = (CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET) - (window.innerWidth / 2);
             workspace.scrollLeft = targetX;
@@ -427,7 +429,7 @@
                 document.getElementById('role-overlay').style.display = 'none';
                 document.getElementById('instructor-tools').style.display = 'flex';
                 document.getElementById('btn-screen').style.display = 'inline-block';
-                document.getElementById('btn-export').style.display = 'inline-block'; // Reveal Export Button
+                document.getElementById('btn-export').style.display = 'inline-block';
                 
                 peer.on('open', (id) => { 
                     document.getElementById('my-id').innerText = id; 
@@ -442,7 +444,12 @@
                     }
                     
                     const savedPage = localStorage.getItem('premium_math_page');
-                    if (savedPage) { currentPage = parseInt(savedPage) - 1; changePage(1, false); } else { changePage(0, false); }
+                    if (savedPage) { 
+                        currentPage = parseInt(savedPage) - 1; 
+                        changePage(1, false); 
+                    } else { 
+                        changePage(0, false); 
+                    }
                     
                     const savedDesmos = localStorage.getItem('premium_math_desmos');
                     if (savedDesmos) {
@@ -570,7 +577,7 @@
                     workspace.scrollLeft = data.scrollLeft;
                     workspace.scrollTop = data.scrollTop;
                 } else if (data.type === 'clear') {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height); boardHistory = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); boardHistory = []; maxPage = 1;
                 } else if (data.type === 'image') {
                     drawImageFromData(data.src, data.x, data.y, false);
                     if (userRole === 'instructor') {
@@ -683,33 +690,46 @@
             }
         }
 
-        // NEW: Export current viewport to PDF
+        // FULL MULTI-PAGE PDF EXPORT ENGINE
         function exportPDF() {
-            showToast("Generating PDF Masterclass notes...");
+            showToast("Generating comprehensive Masterclass PDF... Please wait.");
             const { jsPDF } = window.jspdf;
             
-            // Format PDF to match the exact dimensions of your screen
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [window.innerWidth, window.innerHeight] });
+            // Capture a massive 2000x1125 16:9 area per page to ensure nothing is cut off
+            const pdfWidth = 2000;
+            const pdfHeight = 1125;
+            
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [pdfWidth, pdfHeight] });
             
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = window.innerWidth;
-            tempCanvas.height = window.innerHeight;
+            tempCanvas.width = pdfWidth;
+            tempCanvas.height = pdfHeight;
             const tempCtx = tempCanvas.getContext('2d');
             
-            tempCtx.fillStyle = '#ffffff';
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            for (let p = 1; p <= maxPage; p++) {
+                if (p > 1) pdf.addPage();
+                
+                const centerX = (CANVAS_SIZE / 2) + ((p - 1) * PAGE_OFFSET);
+                const centerY = CANVAS_SIZE / 2;
+                
+                const targetX = centerX - (pdfWidth / 2);
+                const targetY = centerY - (pdfHeight / 2);
+                
+                tempCtx.fillStyle = '#ffffff';
+                tempCtx.fillRect(0, 0, pdfWidth, pdfHeight);
+                
+                tempCtx.drawImage(
+                    canvas, 
+                    targetX, targetY, pdfWidth, pdfHeight,
+                    0, 0, pdfWidth, pdfHeight
+                );
+                
+                const imgData = tempCanvas.toDataURL('image/jpeg', 1.0);
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            }
             
-            tempCtx.drawImage(
-                canvas, 
-                workspace.scrollLeft, workspace.scrollTop, window.innerWidth, window.innerHeight,
-                0, 0, window.innerWidth, window.innerHeight
-            );
-            
-            const imgData = tempCanvas.toDataURL('image/jpeg', 1.0);
-            pdf.addImage(imgData, 'JPEG', 0, 0, window.innerWidth, window.innerHeight);
-            pdf.save(`Masterclass_Page${currentPage}.pdf`);
-            
-            showToast("PDF exported successfully!");
+            pdf.save(`Complete_Masterclass_Notes.pdf`);
+            showToast("Complete PDF exported successfully!");
         }
 
         function clearCanvas() {
@@ -717,6 +737,8 @@
                 if (confirm("Permanently purge all pages and clear board history?")) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     boardHistory = []; localStorage.removeItem('premium_math_history');
+                    maxPage = 1;
+                    changePage(1 - currentPage, true); // Jump back to page 1 safely
                     broadcast({ type: 'clear' });
                 }
             }
