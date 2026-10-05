@@ -78,14 +78,19 @@
         .page-btn { background: transparent; border: none; font-size: 18px; color: #64748b; cursor: pointer; border-radius: 50%; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
         .page-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
 
-        /* Canvas Workspace & DOM Objects */
+        /* Layered Canvas Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
-        #board-content { position: relative; width: 8000px; height: 8000px; }
-        canvas { background: #ffffff; display: block; touch-action: none; position: absolute; top: 0; left: 0; box-shadow: 0 0 40px rgba(0,0,0,0.05); }
         
-        .board-image { position: absolute; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid transparent; border-radius: 8px; overflow: hidden; transform-origin: center; transition: border-color 0.2s; user-select: none; }
+        /* The container gets the solid white background */
+        #board-content { position: relative; width: 8000px; height: 8000px; background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); }
+        
+        /* Images placed UNDER the canvas */
+        .board-image { position: absolute; z-index: 5; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid transparent; border-radius: 8px; overflow: hidden; transform-origin: center; transition: border-color 0.2s; user-select: none; }
         .board-image img { width: 100%; height: 100%; display: block; pointer-events: none; }
         .board-image:hover { border-color: #94a3b8; }
+        
+        /* The drawing canvas has a transparent background and sits ON TOP of images */
+        canvas { background: transparent; display: block; touch-action: none; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: auto; }
         
         /* Enforced Cursors */
         .cursor-select { cursor: default !important; }
@@ -160,7 +165,6 @@
 
     <!-- Premium Side Toolbar -->
     <div id="side-toolbar" class="glass-panel">
-        <!-- NEW: Select Tool -->
         <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move">↖️</button>
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
         <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
@@ -192,8 +196,8 @@
     
     <div id="workspace">
         <div id="board-content">
-            <canvas id="whiteboard" class="cursor-pen"></canvas>
-            <!-- Pasted images will be injected here as floating DOM elements -->
+            <canvas id="whiteboard"></canvas>
+            <!-- Images will spawn here, behind the transparent canvas -->
         </div>
     </div>
 
@@ -271,7 +275,6 @@
         }
 
         function replayHistory() {
-            // Clear existing DOM images before redrawing to prevent duplicates
             document.querySelectorAll('.board-image').forEach(el => el.remove());
             
             const chunkSize = 300; 
@@ -299,10 +302,25 @@
             currentTool = tool;
             document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tool-' + tool).classList.add('active');
+            
+            // Apply cursors to workspace and canvas
+            workspace.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing', 'cursor-select');
+            workspace.classList.add('cursor-' + tool);
             canvas.classList.remove('cursor-pen', 'cursor-eraser', 'cursor-highlighter', 'cursor-pan', 'cursor-grabbing', 'cursor-select');
             canvas.classList.add('cursor-' + tool);
+            
             workspace.style.overflow = tool === 'pan' ? 'auto' : 'hidden';
+
+            // CRUCIAL: Allow clicking through the canvas to the images when select tool is active
+            if (tool === 'select') {
+                canvas.style.pointerEvents = 'none';
+            } else {
+                canvas.style.pointerEvents = 'auto';
+            }
         }
+        
+        // Initialize tool
+        selectTool('pen');
 
         function selectColor(color, btnElement) {
             currentColor = color;
@@ -363,7 +381,10 @@
             if (currentTool === 'pan' || e.button === 1 || e.shiftKey) { 
                 isPanning = true; startPanX = e.clientX; startPanY = e.clientY;
                 startScrollLeft = workspace.scrollLeft; startScrollTop = workspace.scrollTop;
-                if (currentTool === 'pan') canvas.classList.replace('cursor-pan', 'cursor-grabbing');
+                if (currentTool === 'pan') {
+                    workspace.classList.replace('cursor-pan', 'cursor-grabbing');
+                    canvas.classList.replace('cursor-pan', 'cursor-grabbing');
+                }
                 e.preventDefault();
             }
         });
@@ -381,7 +402,10 @@
         
         window.addEventListener('pointerup', () => { 
             isPanning = false; 
-            if (currentTool === 'pan') canvas.classList.replace('cursor-grabbing', 'cursor-pan');
+            if (currentTool === 'pan') {
+                workspace.classList.replace('cursor-grabbing', 'cursor-pan');
+                canvas.classList.replace('cursor-grabbing', 'cursor-pan');
+            }
         });
 
         function makeDraggable(elementId, handleId) {
@@ -693,7 +717,6 @@
         canvas.addEventListener('pointerup', (e) => { isDrawing = false; canvas.releasePointerCapture(e.pointerId); });
         canvas.addEventListener('pointercancel', () => isDrawing = false);
 
-        // NEW: Creating completely independent DOM objects for pasted images
         function placeImageObject(id, src, x, y, width, height, emit = false) {
             const imgContainer = document.createElement('div');
             imgContainer.className = 'board-image';
@@ -789,7 +812,6 @@
             }
         });
 
-        // UPGRADED: Bounding Box PDF Export Engine handles both DOM Images and Canvas Ink
         function exportPDF() {
             showToast("Analyzing board boundaries and generating comprehensive PDF... Please wait.");
             const { jsPDF } = window.jspdf;
@@ -847,14 +869,7 @@
                 tempCtx.fillStyle = '#ffffff';
                 tempCtx.fillRect(0, 0, captureWidth, captureHeight);
                 
-                // 1. Draw Ink Layer
-                tempCtx.drawImage(
-                    canvas, 
-                    captureX, captureY, captureWidth, captureHeight,
-                    0, 0, captureWidth, captureHeight
-                );
-                
-                // 2. Draw Independent Object (Image) Layer
+                // 1. Draw Images FIRST
                 boardHistory.forEach(item => {
                     if (item.type === 'image') {
                         if (item.x + item.width > captureX && item.x < captureX + captureWidth && 
@@ -867,6 +882,13 @@
                         }
                     }
                 });
+                
+                // 2. Draw Ink ON TOP
+                tempCtx.drawImage(
+                    canvas, 
+                    captureX, captureY, captureWidth, captureHeight,
+                    0, 0, captureWidth, captureHeight
+                );
                 
                 const orientation = captureWidth > captureHeight ? 'landscape' : 'portrait';
                 
