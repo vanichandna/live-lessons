@@ -82,14 +82,23 @@
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
         #board-content { position: relative; width: 8000px; height: 8000px; background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); }
         
-        .board-image { position: absolute; z-index: 5; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid transparent; border-radius: 8px; overflow: hidden; transform-origin: center; transition: border-color 0.2s; user-select: none; }
+        /* Images placed UNDER the canvas */
+        .board-image { position: absolute; z-index: 5; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid transparent; border-radius: 8px; overflow: hidden; transform-origin: center; user-select: none; pointer-events: none; }
         .board-image img { width: 100%; height: 100%; display: block; pointer-events: none; }
-        .board-image:hover { border-color: #94a3b8; }
         
+        /* The drawing canvas has a transparent background and sits ON TOP of images */
         canvas { background: transparent; display: block; touch-action: none; position: absolute; top: 0; left: 0; z-index: 10; pointer-events: auto; }
         
-        /* Enforced Cursors */
-        .cursor-select { cursor: default !important; }
+        /* Active Selection Bounding Box Overlay */
+        #selection-box { display: none; position: absolute; pointer-events: none; border: 2px dashed #2563eb; border-radius: 6px; z-index: 25; }
+        .sel-handle { position: absolute; width: 10px; height: 10px; background: #2563eb; border-radius: 2px; }
+        .sel-tl { top: -5px; left: -5px; }
+        .sel-tr { top: -5px; right: -5px; }
+        .sel-bl { bottom: -5px; left: -5px; }
+        .sel-br { bottom: -5px; right: -5px; }
+
+        /* Cursors */
+        .cursor-select { cursor: default; }
         .cursor-pen { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
         .cursor-highlighter { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E") 2 22, crosshair !important; }
         .cursor-eraser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23f1f5f9' stroke='%23475569' stroke-width='2'%3E%3Crect x='4' y='4' width='16' height='16' rx='4' ry='4'%3E%3C/rect%3E%3Cline x1='4' y1='12' x2='20' y2='12'%3E%3C/line%3E%3C/svg%3E") 12 12, crosshair !important; }
@@ -161,7 +170,7 @@
 
     <!-- Premium Side Toolbar -->
     <div id="side-toolbar" class="glass-panel">
-        <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move">↖️</button>
+        <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move (Backspace to Delete)">↖️</button>
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
         <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
         <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
@@ -193,7 +202,13 @@
     <div id="workspace">
         <div id="board-content">
             <canvas id="whiteboard"></canvas>
-            <!-- Floating Images Layer -->
+            <!-- Selection Box Overlay -->
+            <div id="selection-box">
+                <div class="sel-handle sel-tl"></div>
+                <div class="sel-handle sel-tr"></div>
+                <div class="sel-handle sel-bl"></div>
+                <div class="sel-handle sel-br"></div>
+            </div>
         </div>
     </div>
 
@@ -237,6 +252,7 @@
         const ctx = canvas.getContext('2d', { desynchronized: true, willReadFrequently: false });
         const workspace = document.getElementById('workspace');
         const boardContent = document.getElementById('board-content');
+        const selectionBox = document.getElementById('selection-box');
         
         const CANVAS_SIZE = 8000;
         const PAGE_OFFSET = 2000; 
@@ -253,10 +269,11 @@
         let isReceivingDesmosState = false;
         let targetInstructorId = null;
 
-        // VIRTUAL OBJECT ENGINE
+        // UNIFIED OBJECT SELECTION STATE
         let currentStrokeId = null;
-        let selectedStrokeId = null;
-        let strokeDragLastX, strokeDragLastY;
+        let selectedObject = null; // { type: 'image' | 'stroke', id: string }
+        let isDraggingSelection = false;
+        let dragLastX, dragLastY;
 
         let drawBatch = [];
         setInterval(() => {
@@ -295,7 +312,6 @@
             if (boardHistory.length > 0) { requestAnimationFrame(drawNextChunk); }
         }
 
-        // ULTRA-FAST ISOLATED REDRAW (For dragging vector objects without dropping frames)
         function quickRedraw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             boardHistory.forEach(item => {
@@ -321,11 +337,9 @@
             
             workspace.style.overflow = tool === 'pan' ? 'auto' : 'hidden';
 
-            // Allows clicking through the ink layer to select images underneath
-            if (tool === 'select') {
-                canvas.style.pointerEvents = 'auto'; // Keep true to allow vector ink selection too!
-            } else {
-                canvas.style.pointerEvents = 'auto';
+            if (tool !== 'select') {
+                selectedObject = null;
+                updateSelectionUI();
             }
         }
         
@@ -486,6 +500,14 @@
                     if (savedHistory) { 
                         try { 
                             boardHistory = JSON.parse(savedHistory); 
+                            
+                            // Guarantee all historical strokes are assigned IDs for object selection
+                            boardHistory.forEach((item, idx) => {
+                                if (item.type === 'draw' && !item.strokeId) {
+                                    item.strokeId = 'stroke_legacy_' + idx;
+                                }
+                            });
+
                             ctx.clearRect(0, 0, canvas.width, canvas.height); 
                             setTimeout(() => { replayHistory(); }, 300);
                             
@@ -648,6 +670,14 @@
                     });
                     quickRedraw();
                     if (userRole === 'instructor') saveHistoryToStorage();
+                } else if (data.type === 'image-delete') {
+                    document.getElementById(data.id)?.remove();
+                    boardHistory = boardHistory.filter(i => i.id !== data.id);
+                    if (userRole === 'instructor') saveHistoryToStorage();
+                } else if (data.type === 'stroke-delete') {
+                    boardHistory = boardHistory.filter(i => i.strokeId !== data.strokeId);
+                    quickRedraw();
+                    if (userRole === 'instructor') saveHistoryToStorage();
                 } else if (data.type === 'pan') {
                     workspace.scrollLeft = data.scrollLeft;
                     workspace.scrollTop = data.scrollTop;
@@ -655,6 +685,8 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height); 
                     document.querySelectorAll('.board-image').forEach(el => el.remove());
                     boardHistory = []; maxPage = 1;
+                    selectedObject = null;
+                    updateSelectionUI();
                 } else if (data.type === 'page') {
                     currentPage = data.page - 1; changePage(1, false);
                 } else if (data.type === 'stop-screenshare') {
@@ -696,7 +728,6 @@
             return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
         
-        // Advanced Hit Detection Geometry
         function dist2(v, w) { return Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); }
         function distToSegmentSquared(p, v, w) {
             var l2 = dist2(v, w);
@@ -705,6 +736,74 @@
             t = Math.max(0, Math.min(1, t));
             return dist2(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
         }
+
+        // Selection Box UI Synchronizer
+        function updateSelectionUI() {
+            if (!selectedObject) {
+                selectionBox.style.display = 'none';
+                return;
+            }
+
+            if (selectedObject.type === 'image') {
+                const imgItem = boardHistory.find(i => i.id === selectedObject.id);
+                if (imgItem) {
+                    selectionBox.style.left = (imgItem.x - 4) + 'px';
+                    selectionBox.style.top = (imgItem.y - 4) + 'px';
+                    selectionBox.style.width = (imgItem.width + 8) + 'px';
+                    selectionBox.style.height = (imgItem.height + 8) + 'px';
+                    selectionBox.style.display = 'block';
+                } else {
+                    selectionBox.style.display = 'none';
+                }
+            } else if (selectedObject.type === 'stroke') {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                let found = false;
+                boardHistory.forEach(item => {
+                    if (item.type === 'draw' && item.strokeId === selectedObject.id) {
+                        found = true;
+                        minX = Math.min(minX, item.x0, item.x1);
+                        minY = Math.min(minY, item.y0, item.y1);
+                        maxX = Math.max(maxX, item.x0, item.x1);
+                        maxY = Math.max(maxY, item.y0, item.y1);
+                    }
+                });
+
+                if (found) {
+                    selectionBox.style.left = (minX - 8) + 'px';
+                    selectionBox.style.top = (minY - 8) + 'px';
+                    selectionBox.style.width = (maxX - minX + 16) + 'px';
+                    selectionBox.style.height = (maxY - minY + 16) + 'px';
+                    selectionBox.style.display = 'block';
+                } else {
+                    selectionBox.style.display = 'none';
+                }
+            }
+        }
+
+        // Keyboard Deletion for Selected Objects
+        window.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObject) {
+                if (document.activeElement.tagName === 'INPUT') return;
+                
+                if (selectedObject.type === 'image') {
+                    const id = selectedObject.id;
+                    document.getElementById(id)?.remove();
+                    boardHistory = boardHistory.filter(i => i.id !== id);
+                    broadcast({ type: 'image-delete', id: id });
+                } else if (selectedObject.type === 'stroke') {
+                    const sId = selectedObject.id;
+                    boardHistory = boardHistory.filter(i => i.strokeId !== sId);
+                    quickRedraw();
+                    broadcast({ type: 'stroke-delete', strokeId: sId });
+                }
+                
+                selectedObject = null;
+                updateSelectionUI();
+                if (userRole === 'instructor') saveHistoryToStorage();
+                showToast("Object deleted");
+                e.preventDefault();
+            }
+        });
 
         function drawLine(x0, y0, x1, y1, color, width, tool, emit, strokeId = null) {
             ctx.beginPath();
@@ -726,86 +825,160 @@
             }
         }
 
-        // VECTOR INK SELECTION LOGIC
+        // UNIFIED CANVAS POINTER EVENTS FOR BOTH DRAWING AND SELECTION
         canvas.addEventListener('pointerdown', (e) => { 
+            const coords = getCoordinates(e);
+
             if (currentTool === 'select') {
-                const coords = getCoordinates(e);
-                let minDist = 400; // 20px hit-radius for grabbing ink easily
-                let hitStrokeId = null;
-                
-                boardHistory.forEach(item => {
-                    if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
-                        const d2 = distToSegmentSquared({x: coords.x, y: coords.y}, {x: item.x0, y: item.y0}, {x: item.x1, y: item.y1});
-                        const threshold = Math.max(minDist, (item.width * item.width * 2));
-                        if (d2 < threshold) {
-                            minDist = d2;
-                            hitStrokeId = item.strokeId;
+                // 1. Check if user clicked an Image Object
+                let clickedImage = null;
+                for (let i = boardHistory.length - 1; i >= 0; i--) {
+                    const item = boardHistory[i];
+                    if (item.type === 'image') {
+                        if (coords.x >= item.x && coords.x <= item.x + item.width &&
+                            coords.y >= item.y && coords.y <= item.y + item.height) {
+                            clickedImage = item;
+                            break;
                         }
                     }
-                });
+                }
 
-                if (hitStrokeId) {
-                    selectedStrokeId = hitStrokeId;
-                    strokeDragLastX = coords.x;
-                    strokeDragLastY = coords.y;
+                if (clickedImage) {
+                    selectedObject = { type: 'image', id: clickedImage.id };
+                    isDraggingSelection = true;
+                    dragLastX = coords.x;
+                    dragLastY = coords.y;
                     canvas.setPointerCapture(e.pointerId);
                     canvas.style.cursor = 'grabbing';
+                    updateSelectionUI();
                     e.preventDefault();
+                    return;
                 }
+
+                // 2. Check if user clicked a Vector Ink Object
+                let clickedStrokeId = null;
+                let minDist = 900; // 30px hit radius
+                for (let i = boardHistory.length - 1; i >= 0; i--) {
+                    const item = boardHistory[i];
+                    if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
+                        const d2 = distToSegmentSquared({x: coords.x, y: coords.y}, {x: item.x0, y: item.y0}, {x: item.x1, y: item.y1});
+                        const threshold = Math.max(minDist, item.width * item.width * 4);
+                        if (d2 < threshold) {
+                            clickedStrokeId = item.strokeId;
+                            break;
+                        }
+                    }
+                }
+
+                if (clickedStrokeId) {
+                    selectedObject = { type: 'stroke', id: clickedStrokeId };
+                    isDraggingSelection = true;
+                    dragLastX = coords.x;
+                    dragLastY = coords.y;
+                    canvas.setPointerCapture(e.pointerId);
+                    canvas.style.cursor = 'grabbing';
+                    updateSelectionUI();
+                    e.preventDefault();
+                    return;
+                }
+
+                // Clicked on empty canvas -> clear selection
+                selectedObject = null;
+                updateSelectionUI();
                 return;
             }
 
-            if (currentTool === 'pan' || currentTool === 'select' || e.button === 1 || e.shiftKey) return; 
+            if (currentTool === 'pan' || e.button === 1 || e.shiftKey) return; 
             
             isDrawing = true; 
             canvas.setPointerCapture(e.pointerId);
             
             currentStrokeId = 'stroke_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-            const coords = getCoordinates(e); lastX = coords.x; lastY = coords.y; 
+            lastX = coords.x; lastY = coords.y; 
             drawLine(lastX, lastY, coords.x + 0.1, coords.y + 0.1, currentColor, document.getElementById('line-width').value, currentTool, true, currentStrokeId);
         });
         
         canvas.addEventListener('pointermove', (e) => {
-            if (selectedStrokeId) {
-                const coords = getCoordinates(e);
-                const dx = coords.x - strokeDragLastX;
-                const dy = coords.y - strokeDragLastY;
-                
-                boardHistory.forEach(item => {
-                    if (item.type === 'draw' && item.strokeId === selectedStrokeId) {
-                        item.x0 += dx; item.y0 += dy; item.x1 += dx; item.y1 += dy;
+            const coords = getCoordinates(e);
+
+            // Handle Active Object Dragging
+            if (currentTool === 'select') {
+                if (isDraggingSelection && selectedObject) {
+                    const dx = coords.x - dragLastX;
+                    const dy = coords.y - dragLastY;
+                    dragLastX = coords.x;
+                    dragLastY = coords.y;
+
+                    if (selectedObject.type === 'image') {
+                        const imgItem = boardHistory.find(i => i.id === selectedObject.id);
+                        if (imgItem) {
+                            imgItem.x += dx;
+                            imgItem.y += dy;
+                            const el = document.getElementById(selectedObject.id);
+                            if (el) {
+                                el.style.left = imgItem.x + 'px';
+                                el.style.top = imgItem.y + 'px';
+                            }
+                            broadcast({ type: 'image-move', id: selectedObject.id, x: imgItem.x, y: imgItem.y });
+                        }
+                    } else if (selectedObject.type === 'stroke') {
+                        boardHistory.forEach(item => {
+                            if (item.strokeId === selectedObject.id) {
+                                item.x0 += dx; item.y0 += dy; item.x1 += dx; item.y1 += dy;
+                            }
+                        });
+                        quickRedraw();
+                        broadcast({ type: 'stroke-move', strokeId: selectedObject.id, dx: dx, dy: dy });
                     }
-                });
-                
-                strokeDragLastX = coords.x;
-                strokeDragLastY = coords.y;
-                
-                quickRedraw();
-                broadcast({ type: 'stroke-move', strokeId: selectedStrokeId, dx: dx, dy: dy });
+
+                    updateSelectionUI();
+                    return;
+                }
+
+                // Dynamic Hover Cursor Feedback for Selectable Objects
+                let isOver = false;
+                for (let i = boardHistory.length - 1; i >= 0; i--) {
+                    const item = boardHistory[i];
+                    if (item.type === 'image') {
+                        if (coords.x >= item.x && coords.x <= item.x + item.width &&
+                            coords.y >= item.y && coords.y <= item.y + item.height) {
+                            isOver = true; break;
+                        }
+                    } else if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
+                        const d2 = distToSegmentSquared({x: coords.x, y: coords.y}, {x: item.x0, y: item.y0}, {x: item.x1, y: item.y1});
+                        if (d2 < 900) { isOver = true; break; }
+                    }
+                }
+                canvas.style.cursor = isOver ? 'grab' : 'default';
                 return;
             }
 
             if (!isDrawing) return;
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
             for (let ev of events) {
-                const coords = getCoordinates(ev);
-                drawLine(lastX, lastY, coords.x, coords.y, currentColor, document.getElementById('line-width').value, currentTool, true, currentStrokeId);
-                lastX = coords.x; lastY = coords.y;
+                const c = getCoordinates(ev);
+                drawLine(lastX, lastY, c.x, c.y, currentColor, document.getElementById('line-width').value, currentTool, true, currentStrokeId);
+                lastX = c.x; lastY = c.y;
             }
         });
         
         canvas.addEventListener('pointerup', (e) => { 
-            if (selectedStrokeId) {
-                selectedStrokeId = null;
+            if (currentTool === 'select' && isDraggingSelection) {
+                isDraggingSelection = false;
                 canvas.releasePointerCapture(e.pointerId);
-                canvas.style.cursor = 'default';
+                canvas.style.cursor = 'grab';
                 if (userRole === 'instructor') saveHistoryToStorage();
                 return;
             }
+
             isDrawing = false; 
             canvas.releasePointerCapture(e.pointerId); 
         });
-        canvas.addEventListener('pointercancel', () => { isDrawing = false; selectedStrokeId = null; });
+        
+        canvas.addEventListener('pointercancel', () => { 
+            isDrawing = false; 
+            isDraggingSelection = false;
+        });
 
         function placeImageObject(id, src, x, y, width, height, emit = false) {
             const imgContainer = document.createElement('div');
@@ -820,51 +993,6 @@
             img.src = src;
             imgContainer.appendChild(img);
             boardContent.appendChild(imgContainer);
-
-            let isDraggingObj = false, startX, startY, origX, origY;
-            
-            imgContainer.addEventListener('pointerdown', (e) => {
-                if (currentTool !== 'select') {
-                    // Let the transparent canvas behind it catch the click so you can draw on it!
-                    canvas.dispatchEvent(new PointerEvent('pointerdown', e));
-                    return;
-                }
-                e.stopPropagation(); 
-                isDraggingObj = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                origX = parseInt(imgContainer.style.left);
-                origY = parseInt(imgContainer.style.top);
-                imgContainer.style.cursor = 'grabbing';
-            });
-            
-            window.addEventListener('pointermove', (e) => {
-                if (!isDraggingObj) return;
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                imgContainer.style.left = (origX + dx) + 'px';
-                imgContainer.style.top = (origY + dy) + 'px';
-                
-                clearTimeout(imgContainer.syncTimeout);
-                imgContainer.syncTimeout = setTimeout(() => {
-                    broadcast({ type: 'image-move', id: id, x: origX + dx, y: origY + dy });
-                }, 40);
-            });
-            
-            window.addEventListener('pointerup', () => {
-                if (!isDraggingObj) return;
-                isDraggingObj = false;
-                imgContainer.style.cursor = '';
-                
-                const newX = parseInt(imgContainer.style.left);
-                const newY = parseInt(imgContainer.style.top);
-                
-                const histItem = boardHistory.find(i => i.id === id);
-                if (histItem) { histItem.x = newX; histItem.y = newY; }
-                if (userRole === 'instructor') saveHistoryToStorage();
-                
-                broadcast({ type: 'image-move', id: id, x: newX, y: newY });
-            });
 
             if (emit && userRole === 'instructor') {
                 const item = { type: 'image', id, src, x, y, width, height };
@@ -1008,6 +1136,8 @@
                     document.querySelectorAll('.board-image').forEach(el => el.remove());
                     boardHistory = []; localStorage.removeItem('premium_math_history');
                     maxPage = 1;
+                    selectedObject = null;
+                    updateSelectionUI();
                     changePage(1 - currentPage, true); 
                     broadcast({ type: 'clear' });
                 }
