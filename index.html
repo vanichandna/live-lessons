@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Premium Live Math Masterclass</title>
     <!-- PeerJS for WebRTC -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -18,7 +18,7 @@
     <style>
         /* Elite Base Styling */
         * { box-sizing: border-box; }
-        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; background: #f4f4f5; overflow: hidden; }
+        body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; background: #f4f4f5; overflow: hidden; touch-action: none; }
         
         /* Premium Entry Gates */
         #role-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 24px; }
@@ -81,7 +81,7 @@
         .page-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
 
         /* Layered Canvas Workspace */
-        #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
+        #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; touch-action: none; }
         #board-content { position: relative; width: 8000px; height: 8000px; background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); transform-origin: 0 0; }
         
         /* Images placed UNDER the canvas */
@@ -330,10 +330,11 @@
             document.getElementById('btn-pip').style.display = 'inline-block';
         }
 
-        // ZOOM STATE
+        // ZOOM STATE & GESTURE ENGINE
         let currentZoom = 1.0;
         const MIN_ZOOM = 0.25;
         const MAX_ZOOM = 3.0;
+        let zoomSyncTimeout = null;
 
         // UNIFIED OBJECT SELECTION STATE
         let currentStrokeId = null;
@@ -341,27 +342,34 @@
         let isDraggingSelection = false;
         let dragLastX, dragLastY;
 
-        function applyZoom(newZoom, emit = true) {
-            const clampedZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(newZoom * 100) / 100));
-            if (clampedZoom === currentZoom) return;
+        function applyZoom(newZoom, emit = true, focalClientX = null, focalClientY = null) {
+            const clampedZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(newZoom * 1000) / 1000));
+            if (Math.abs(clampedZoom - currentZoom) < 0.001) return;
 
-            const centerX = (workspace.scrollLeft + workspace.clientWidth / 2) / currentZoom;
-            const centerY = (workspace.scrollTop + workspace.clientHeight / 2) / currentZoom;
+            const rect = workspace.getBoundingClientRect();
+            const offsetX = focalClientX !== null ? (focalClientX - rect.left) : (workspace.clientWidth / 2);
+            const offsetY = focalClientY !== null ? (focalClientY - rect.top) : (workspace.clientHeight / 2);
+
+            const boardX = (workspace.scrollLeft + offsetX) / currentZoom;
+            const boardY = (workspace.scrollTop + offsetY) / currentZoom;
 
             currentZoom = clampedZoom;
             boardContent.style.transform = `scale(${currentZoom})`;
             document.getElementById('zoom-indicator').innerText = `${Math.round(currentZoom * 100)}%`;
 
-            workspace.scrollLeft = centerX * currentZoom - workspace.clientWidth / 2;
-            workspace.scrollTop = centerY * currentZoom - workspace.clientHeight / 2;
+            workspace.scrollLeft = boardX * currentZoom - offsetX;
+            workspace.scrollTop = boardY * currentZoom - offsetY;
 
             if (emit) {
-                broadcast({
-                    type: 'zoom',
-                    zoom: currentZoom,
-                    scrollLeft: workspace.scrollLeft,
-                    scrollTop: workspace.scrollTop
-                });
+                clearTimeout(zoomSyncTimeout);
+                zoomSyncTimeout = setTimeout(() => {
+                    broadcast({
+                        type: 'zoom',
+                        zoom: currentZoom,
+                        scrollLeft: workspace.scrollLeft,
+                        scrollTop: workspace.scrollTop
+                    });
+                }, 30);
             }
         }
 
@@ -372,6 +380,67 @@
         function resetZoom() {
             applyZoom(1.0, true);
         }
+
+        // Trackpad 2-Finger Pinch-to-Zoom (and Ctrl + Mouse Wheel)
+        workspace.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                const zoomFactor = Math.exp(-e.deltaY * 0.01);
+                applyZoom(currentZoom * zoomFactor, true, e.clientX, e.clientY);
+            }
+        }, { passive: false });
+
+        // Touchscreen / iPad 2-Finger Pinch-to-Zoom & Simultaneous Pan
+        let isPinching = false;
+        let lastPinchDist = 0;
+        let lastPinchMidX = 0;
+        let lastPinchMidY = 0;
+
+        function getTouchDistance(t1, t2) {
+            return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        }
+
+        workspace.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                isPinching = true;
+                isDrawing = false; // Cancel any accidental single-finger stroke
+                isDraggingSelection = false;
+                lastPinchDist = getTouchDistance(e.touches[0], e.touches[1]);
+                lastPinchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                lastPinchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            }
+        }, { passive: false });
+
+        workspace.addEventListener('touchmove', (e) => {
+            if (isPinching && e.touches.length === 2) {
+                e.preventDefault();
+                const dist = getTouchDistance(e.touches[0], e.touches[1]);
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                // Pan with midpoint movement
+                workspace.scrollLeft -= (midX - lastPinchMidX);
+                workspace.scrollTop -= (midY - lastPinchMidY);
+
+                // Zoom around the midpoint
+                if (lastPinchDist > 0) {
+                    const scaleChange = dist / lastPinchDist;
+                    applyZoom(currentZoom * scaleChange, true, midX, midY);
+                }
+
+                lastPinchDist = dist;
+                lastPinchMidX = midX;
+                lastPinchMidY = midY;
+            }
+        }, { passive: false });
+
+        workspace.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isPinching = false;
+                lastPinchDist = 0;
+            }
+        });
 
         let drawBatch = [];
         setInterval(() => {
@@ -506,6 +575,7 @@
         let panSyncTimeout;
         
         workspace.addEventListener('pointerdown', (e) => {
+            if (isPinching) return;
             if (currentTool === 'pan' || e.button === 1 || e.shiftKey) { 
                 isPanning = true; startPanX = e.clientX; startPanY = e.clientY;
                 startScrollLeft = workspace.scrollLeft; startScrollTop = workspace.scrollTop;
@@ -518,7 +588,7 @@
         });
         
         workspace.addEventListener('pointermove', (e) => {
-            if (!isPanning) return;
+            if (!isPanning || isPinching) return;
             workspace.scrollLeft = startScrollLeft - (e.clientX - startPanX);
             workspace.scrollTop = startScrollTop - (e.clientY - startPanY);
             
@@ -942,6 +1012,7 @@
         let pendingStrokeDx = 0, pendingStrokeDy = 0;
 
         canvas.addEventListener('pointerdown', (e) => { 
+            if (isPinching) return;
             const coords = getCoordinates(e);
 
             if (currentTool === 'select') {
@@ -997,6 +1068,7 @@
         });
         
         canvas.addEventListener('pointermove', (e) => {
+            if (isPinching) return;
             const coords = getCoordinates(e);
 
             if (currentTool === 'select') {
@@ -1092,7 +1164,7 @@
             }
 
             isDrawing = false; 
-            canvas.releasePointerCapture(e.pointerId); 
+            try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
         });
         
         canvas.addEventListener('pointercancel', () => { 
