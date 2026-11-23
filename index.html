@@ -118,9 +118,13 @@
 
         /* Camera Panel */
         #video-container { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 16px; align-items: flex-end; z-index: 150; pointer-events: none; }
-        video.cam-video { background: #0f172a; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); pointer-events: auto; object-fit: cover; border: 2px solid rgba(255,255,255,0.1); }
+        video.cam-video { background: #0f172a; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); pointer-events: auto; object-fit: cover; border: 2px solid rgba(255,255,255,0.1); display: block; }
         #local-video { width: 160px; height: 120px; }
-        #remote-video { width: 300px; height: 225px; display: none; border-color: #2563eb; }
+        
+        #remote-video-wrapper { position: relative; display: none; pointer-events: auto; }
+        #remote-video { width: 300px; height: 225px; border-color: #2563eb; }
+        .pip-overlay-btn { position: absolute; top: 10px; right: 10px; background: rgba(15, 23, 42, 0.75); color: white; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; backdrop-filter: blur(6px); transition: all 0.2s; z-index: 10; }
+        .pip-overlay-btn:hover { background: #2563eb; transform: scale(1.05); }
         
         /* Alerts */
         #toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 14px 28px; border-radius: 30px; font-size: 15px; font-weight: 500; display: none; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); }
@@ -163,6 +167,7 @@
         <div id="action-bar" class="glass-panel">
             <button id="btn-mute" onclick="toggleMute()">🎙️ Mute</button>
             <button id="btn-video" onclick="toggleVideo()">📹 Cam</button>
+            <button id="btn-pip" style="display:none;" onclick="toggleStudentPiP()" title="Move student video out of browser onto another screen">🪟 Float Video</button>
             <button class="primary-btn" id="btn-screen" style="display:none;" onclick="toggleScreenShare()">📺 Screen</button>
             <button class="primary-btn" onclick="toggleDesmos()">📈 Desmos</button>
             <button class="success-btn" id="btn-export" style="display:none;" onclick="exportPDF()">📄 Export PDF</button>
@@ -240,7 +245,10 @@
 
     <div id="video-container">
         <video id="local-video" class="cam-video" autoplay muted playsinline></video>
-        <video id="remote-video" class="cam-video" autoplay playsinline></video>
+        <div id="remote-video-wrapper">
+            <video id="remote-video" class="cam-video" autoplay playsinline></video>
+            <button class="pip-overlay-btn" id="pip-overlay-btn" onclick="toggleStudentPiP()" title="Float video out of browser">↗️</button>
+        </div>
     </div>
 
     <div id="toast">Message</div>
@@ -263,6 +271,8 @@
         const workspace = document.getElementById('workspace');
         const boardContent = document.getElementById('board-content');
         const selectionBox = document.getElementById('selection-box');
+        const remoteVideoEl = document.getElementById('remote-video');
+        const remoteVideoWrapper = document.getElementById('remote-video-wrapper');
         
         const CANVAS_SIZE = 8000;
         const PAGE_OFFSET = 2000; 
@@ -279,6 +289,47 @@
         let isReceivingDesmosState = false;
         let targetInstructorId = null;
 
+        // PICTURE-IN-PICTURE (FLOATING VIDEO) CONTROLS
+        async function toggleStudentPiP() {
+            if (!document.pictureInPictureEnabled) {
+                showToast("Your browser does not support floating Picture-in-Picture video.");
+                return;
+            }
+            if (!remoteVideoEl.srcObject) {
+                showToast("Waiting for student video to connect...");
+                return;
+            }
+            try {
+                if (document.pictureInPictureElement === remoteVideoEl) {
+                    await document.exitPictureInPicture();
+                } else {
+                    await remoteVideoEl.requestPictureInPicture();
+                }
+            } catch (err) {
+                console.error("PiP Error:", err);
+                showToast("Unable to float video. Make sure the video is playing.");
+            }
+        }
+
+        remoteVideoEl.addEventListener('enterpictureinpicture', () => {
+            document.getElementById('btn-pip').innerText = "🪟 Dock Video";
+            document.getElementById('pip-overlay-btn').innerText = "↙️";
+            remoteVideoWrapper.style.opacity = "0.25";
+            showToast("Student video floated — drag it onto your front screen!");
+        });
+
+        remoteVideoEl.addEventListener('leavepictureinpicture', () => {
+            document.getElementById('btn-pip').innerText = "🪟 Float Video";
+            document.getElementById('pip-overlay-btn').innerText = "↗️";
+            remoteVideoWrapper.style.opacity = "1";
+        });
+
+        function showRemoteVideo(stream) {
+            remoteVideoEl.srcObject = stream;
+            remoteVideoWrapper.style.display = 'block';
+            document.getElementById('btn-pip').style.display = 'inline-block';
+        }
+
         // ZOOM STATE
         let currentZoom = 1.0;
         const MIN_ZOOM = 0.25;
@@ -294,7 +345,6 @@
             const clampedZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(newZoom * 100) / 100));
             if (clampedZoom === currentZoom) return;
 
-            // Keep the viewport center anchored while zooming
             const centerX = (workspace.scrollLeft + workspace.clientWidth / 2) / currentZoom;
             const centerY = (workspace.scrollTop + workspace.clientHeight / 2) / currentZoom;
 
@@ -605,8 +655,7 @@
                     currentCall = call;
                     if (localStream) call.answer(localStream); else call.answer();
                     call.on('stream', (remoteStream) => {
-                        document.getElementById('remote-video').srcObject = remoteStream;
-                        document.getElementById('remote-video').style.display = 'block';
+                        showRemoteVideo(remoteStream);
                     });
                 });
                 
@@ -664,8 +713,7 @@
             if (localStream) {
                 currentCall = peer.call(targetId, localStream);
                 currentCall.on('stream', (remoteStream) => {
-                    document.getElementById('remote-video').srcObject = remoteStream;
-                    document.getElementById('remote-video').style.display = 'block';
+                    showRemoteVideo(remoteStream);
                 });
             }
         }
@@ -1269,6 +1317,7 @@
 
         function leaveClassroom() {
             if (confirm("End the session? Your board history will be saved automatically.")) {
+                if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
                 if (peer) peer.destroy();
                 if (localStream) localStream.getTracks().forEach(track => track.stop());
                 if (screenStream) screenStream.getTracks().forEach(track => track.stop());
