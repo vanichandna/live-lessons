@@ -57,21 +57,23 @@
         .danger-btn:hover { background: #fca5a5 !important; }
 
         /* Side Toolbar */
-        #side-toolbar { position: fixed; top: 90px; left: 24px; transform: none; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px; z-index: 100; align-items: center; max-height: calc(100vh - 180px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+        #side-toolbar { position: fixed; top: 90px; left: 24px; transform: none; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; z-index: 100; align-items: center; max-height: calc(100vh - 130px); overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
         #side-toolbar::-webkit-scrollbar { display: none; }
         
-        .tool-btn { width: 48px; height: 48px; border-radius: 12px; border: none; background: transparent; font-size: 22px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; color: #64748b; }
+        .tool-btn { width: 44px; height: 44px; border-radius: 12px; border: none; background: transparent; font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; color: #64748b; flex-shrink: 0; }
         .tool-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
         .tool-btn.active { background: #eff6ff; color: #2563eb; box-shadow: inset 0 0 0 1.5px #bfdbfe; }
+        .zoom-label { font-size: 12px; font-weight: 600; color: #475569; cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: background 0.2s; user-select: none; }
+        .zoom-label:hover { background: rgba(0,0,0,0.06); color: #0f172a; }
         
-        .toolbar-divider { width: 36px; height: 1.5px; background: rgba(0,0,0,0.06); margin: 4px 0; }
+        .toolbar-divider { width: 36px; height: 1.5px; background: rgba(0,0,0,0.06); margin: 2px 0; flex-shrink: 0; }
         
         /* Color Swatches */
         .color-grid { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        .color-btn { width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 1px #cbd5e1; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .color-btn { width: 26px; height: 26px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 1px #cbd5e1; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .color-btn.active { transform: scale(1.25); box-shadow: 0 0 0 2px #2563eb; }
         
-        input[type=range] { width: 100px; transform: rotate(-90deg); margin: 50px 0; cursor: pointer; accent-color: #2563eb; }
+        input[type=range] { width: 90px; transform: rotate(-90deg); margin: 45px 0; cursor: pointer; accent-color: #2563eb; }
 
         /* Pagination Footer */
         #pagination-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); border-radius: 30px; padding: 8px 16px; display: flex; align-items: center; gap: 15px; z-index: 100; font-weight: 600; color: #334155; }
@@ -80,7 +82,7 @@
 
         /* Layered Canvas Workspace */
         #workspace { flex-grow: 1; position: relative; overflow: hidden; background: #e2e8f0; width: 100vw; height: 100vh; }
-        #board-content { position: relative; width: 8000px; height: 8000px; background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); }
+        #board-content { position: relative; width: 8000px; height: 8000px; background: #ffffff; box-shadow: 0 0 40px rgba(0,0,0,0.05); transform-origin: 0 0; }
         
         /* Images placed UNDER the canvas */
         .board-image { position: absolute; z-index: 5; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid transparent; border-radius: 8px; overflow: hidden; transform-origin: center; user-select: none; pointer-events: none; }
@@ -172,10 +174,17 @@
     <div id="side-toolbar" class="glass-panel">
         <button class="tool-btn" id="tool-select" onclick="selectTool('select')" title="Select & Move (Del to Delete)">↖️</button>
         <button class="tool-btn active" id="tool-pen" onclick="selectTool('pen')" title="Pen">🖊️</button>
-        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️️</button>
+        <button class="tool-btn" id="tool-highlighter" onclick="selectTool('highlighter')" title="Highlighter">🖍️</button>
         <button class="tool-btn" id="tool-eraser" onclick="selectTool('eraser')" title="Eraser">🧽</button>
         <button class="tool-btn" id="tool-pan" onclick="selectTool('pan')" title="Pan Board">✋</button>
         
+        <div class="toolbar-divider"></div>
+
+        <!-- Zoom Controls -->
+        <button class="tool-btn" id="btn-zoom-in" onclick="adjustZoom(0.25)" title="Zoom In">➕</button>
+        <span class="zoom-label" id="zoom-indicator" onclick="resetZoom()" title="Click to Reset to 100%">100%</span>
+        <button class="tool-btn" id="btn-zoom-out" onclick="adjustZoom(-0.25)" title="Zoom Out">➖</button>
+
         <div class="toolbar-divider"></div>
         
         <div class="color-grid">
@@ -240,7 +249,7 @@
         const INSTRUCTOR_SECRET_PIN = "VANI-MATH";
         let boardHistory = [];
         let maxPage = 1;
-        let activeRoomKey = 'default'; // Dynamically updated based on Room ID
+        let activeRoomKey = 'default';
 
         window.onload = () => {
             const savedRoom = localStorage.getItem('premium_math_last_room');
@@ -270,11 +279,49 @@
         let isReceivingDesmosState = false;
         let targetInstructorId = null;
 
+        // ZOOM STATE
+        let currentZoom = 1.0;
+        const MIN_ZOOM = 0.25;
+        const MAX_ZOOM = 3.0;
+
         // UNIFIED OBJECT SELECTION STATE
         let currentStrokeId = null;
         let selectedObject = null; 
         let isDraggingSelection = false;
         let dragLastX, dragLastY;
+
+        function applyZoom(newZoom, emit = true) {
+            const clampedZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(newZoom * 100) / 100));
+            if (clampedZoom === currentZoom) return;
+
+            // Keep the viewport center anchored while zooming
+            const centerX = (workspace.scrollLeft + workspace.clientWidth / 2) / currentZoom;
+            const centerY = (workspace.scrollTop + workspace.clientHeight / 2) / currentZoom;
+
+            currentZoom = clampedZoom;
+            boardContent.style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoom-indicator').innerText = `${Math.round(currentZoom * 100)}%`;
+
+            workspace.scrollLeft = centerX * currentZoom - workspace.clientWidth / 2;
+            workspace.scrollTop = centerY * currentZoom - workspace.clientHeight / 2;
+
+            if (emit) {
+                broadcast({
+                    type: 'zoom',
+                    zoom: currentZoom,
+                    scrollLeft: workspace.scrollLeft,
+                    scrollTop: workspace.scrollTop
+                });
+            }
+        }
+
+        function adjustZoom(delta) {
+            applyZoom(currentZoom + delta, true);
+        }
+
+        function resetZoom() {
+            applyZoom(1.0, true);
+        }
 
         let drawBatch = [];
         setInterval(() => {
@@ -365,9 +412,9 @@
             if (currentPage > maxPage) maxPage = currentPage; 
 
             document.getElementById('page-indicator').innerText = `Page ${currentPage}`;
-            const targetX = (CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET) - (window.innerWidth / 2);
+            const targetX = ((CANVAS_SIZE / 2) + ((currentPage - 1) * PAGE_OFFSET)) * currentZoom - (window.innerWidth / 2);
             workspace.scrollLeft = targetX;
-            workspace.scrollTop = (CANVAS_SIZE / 2) - (window.innerHeight / 2);
+            workspace.scrollTop = (CANVAS_SIZE / 2) * currentZoom - (window.innerHeight / 2);
             if (emit && userRole === 'instructor') {
                 broadcast({ type: 'page', page: currentPage });
                 localStorage.setItem('premium_math_page_' + activeRoomKey, currentPage);
@@ -395,7 +442,7 @@
                 const originalText = btn.innerText;
                 btn.innerText = "Starting Camera...";
                 
-                activeRoomKey = sanitizedId; // Set unique storage key for this room
+                activeRoomKey = sanitizedId;
                 localStorage.setItem('premium_math_last_room', sanitizedId);
                 await initSession('instructor', sanitizedId);
                 
@@ -509,7 +556,6 @@
                         try { 
                             boardHistory = JSON.parse(savedHistory); 
                             
-                            // EXACT Connection Recovery: Stitch old fragments ONLY if coordinates connect perfectly without lifting
                             let activeLegacyId = 'stroke_legacy_0';
                             boardHistory.forEach((item, idx) => {
                                 if (item.type === 'draw' && !item.strokeId) {
@@ -638,6 +684,7 @@
                             conn.send({ type: 'desmos-state', state: calculator.getState() });
                         }
                         conn.send({ type: 'page', page: currentPage });
+                        conn.send({ type: 'zoom', zoom: currentZoom, scrollLeft: workspace.scrollLeft, scrollTop: workspace.scrollTop });
                         
                         const chunkSize = 200;
                         let i = 0;
@@ -699,6 +746,10 @@
                 } else if (data.type === 'pan') {
                     workspace.scrollLeft = data.scrollLeft;
                     workspace.scrollTop = data.scrollTop;
+                } else if (data.type === 'zoom') {
+                    applyZoom(data.zoom, false);
+                    if (typeof data.scrollLeft === 'number') workspace.scrollLeft = data.scrollLeft;
+                    if (typeof data.scrollTop === 'number') workspace.scrollTop = data.scrollTop;
                 } else if (data.type === 'clear') {
                     ctx.clearRect(0, 0, canvas.width, canvas.height); 
                     document.querySelectorAll('.board-image').forEach(el => el.remove());
@@ -742,7 +793,10 @@
 
         function getCoordinates(e) {
             const rect = canvas.getBoundingClientRect();
-            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            return {
+                x: (e.clientX - rect.left) / currentZoom,
+                y: (e.clientY - rect.top) / currentZoom
+            };
         }
 
         function dist2(v, w) { return Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); }
@@ -845,6 +899,7 @@
             if (currentTool === 'select') {
                 let clickedObjectId = null;
                 let clickedObjectType = null;
+                const zoomScaledHitSq = 900 / (currentZoom * currentZoom);
 
                 for (let i = boardHistory.length - 1; i >= 0; i--) {
                     const item = boardHistory[i];
@@ -857,7 +912,7 @@
                         }
                     } else if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
                         const d2 = distToSegmentSquared({x: coords.x, y: coords.y}, {x: item.x0, y: item.y0}, {x: item.x1, y: item.y1});
-                        const threshold = Math.max(900, item.width * item.width * 4); 
+                        const threshold = Math.max(zoomScaledHitSq, item.width * item.width * 4); 
                         if (d2 < threshold) {
                             clickedObjectId = item.strokeId;
                             clickedObjectType = 'stroke';
@@ -941,6 +996,7 @@
                 }
 
                 let isOver = false;
+                const zoomScaledHitSq = 900 / (currentZoom * currentZoom);
                 for (let i = boardHistory.length - 1; i >= 0; i--) {
                     const item = boardHistory[i];
                     if (item.type === 'image') {
@@ -949,7 +1005,7 @@
                         }
                     } else if (item.type === 'draw' && item.tool !== 'eraser' && item.strokeId) {
                         const d2 = distToSegmentSquared({x: coords.x, y: coords.y}, {x: item.x0, y: item.y0}, {x: item.x1, y: item.y1});
-                        if (d2 < 900) { isOver = true; break; }
+                        if (d2 < zoomScaledHitSq) { isOver = true; break; }
                     }
                 }
                 canvas.style.cursor = isOver ? 'grab' : 'default';
@@ -1029,8 +1085,8 @@
                     const blob = items[i].getAsFile(); const reader = new FileReader();
                     reader.onload = function(event) {
                         const base64data = event.target.result;
-                        const x = workspace.scrollLeft + (window.innerWidth / 2) - 200;
-                        const y = workspace.scrollTop + (window.innerHeight / 2) - 200;
+                        const x = (workspace.scrollLeft + (window.innerWidth / 2)) / currentZoom - 200;
+                        const y = (workspace.scrollTop + (window.innerHeight / 2)) / currentZoom - 200;
                         
                         const img = new Image();
                         img.onload = function() {
